@@ -1,0 +1,2 @@
+./bnfc --c -m -o idk Javalette.cf  &&  make -C idk
+./bnfc --cpp -m -o idk Javalette.cf  &&  make -C idk  
