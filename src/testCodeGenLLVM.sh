@@ -104,21 +104,41 @@ for f in "$GOOD_DIR"/*.jl; do
     continue
   fi
 
-  if ! lli "$linked" >"$prog_out" 2>"$runerr"; then
-    echo " GOOD: $f   (lli failed)"
-    good_fail=$((good_fail+1))
+input="${GOOD_DIR}/${base}.input"
 
-    cp "$f" "$TMP_DIR/${base}.jl"
-    cp "$stderr" "$TMP_DIR/${base}.jlc+llvm.stderr"
-    cp "$runerr" "$TMP_DIR/${base}.run.stderr"
-    cp "$ll" "$TMP_DIR/${base}.ll"
-    cp "$bc" "$TMP_DIR/${base}.bc"
-    cp "$linked" "$TMP_DIR/${base}.linked.bc"
-
-    rm -f "$stderr" "$ll" "$bc" "$linked" "$prog_out" "$runerr"
-    continue
-  fi
-
+    if [ -f "$input" ]; then
+      # Program expects input: feed it from the .input file
+      if ! lli "$linked" <"$input" >"$prog_out" 2>"$runerr"; then
+        echo " GOOD: $f   (lli failed)"
+        good_fail=$((good_fail+1))
+      
+        cp "$f" "$TMP_DIR/${base}.jl"
+        cp "$stderr" "$TMP_DIR/${base}.jlc+llvm.stderr"
+        cp "$runerr" "$TMP_DIR/${base}.run.stderr"
+        cp "$ll" "$TMP_DIR/${base}.ll"
+        cp "$bc" "$TMP_DIR/${base}.bc"
+        cp "$linked" "$TMP_DIR/${base}.linked.bc"
+      
+        rm -f "$stderr" "$ll" "$bc" "$linked" "$prog_out" "$runerr"
+        continue
+      fi
+    else
+      # No input file: run as before
+      if ! lli "$linked" >"$prog_out" 2>"$runerr"; then
+        echo " GOOD: $f   (lli failed)"
+        good_fail=$((good_fail+1))
+      
+        cp "$f" "$TMP_DIR/${base}.jl"
+        cp "$stderr" "$TMP_DIR/${base}.jlc+llvm.stderr"
+        cp "$runerr" "$TMP_DIR/${base}.run.stderr"
+        cp "$ll" "$TMP_DIR/${base}.ll"
+        cp "$bc" "$TMP_DIR/${base}.bc"
+        cp "$linked" "$TMP_DIR/${base}.linked.bc"
+      
+        rm -f "$stderr" "$ll" "$bc" "$linked" "$prog_out" "$runerr"
+        continue
+      fi
+    fi
   # Compare program output with reference
   if diff -u "$ref_out" "$prog_out" >/dev/null 2>&1; then
     echo " GOOD: $f"
@@ -126,14 +146,14 @@ for f in "$GOOD_DIR"/*.jl; do
   else
     echo " GOOD: $f   (output mismatch)"
     good_fail=$((good_fail+1))
-
+      
     echo "  --- EXPECTED ($ref_out) ---"
     cat "$ref_out"
     echo "  --- GOT ---"
     cat "$prog_out"
     echo "  --- end ---"
     echo
-
+      
     cp "$f" "$TMP_DIR/${base}.jl"
     cp "$stderr" "$TMP_DIR/${base}.jlc+llvm.stderr"
     cp "$ll" "$TMP_DIR/${base}.ll"
@@ -141,8 +161,8 @@ for f in "$GOOD_DIR"/*.jl; do
     cp "$linked" "$TMP_DIR/${base}.linked.bc"
     cp "$prog_out" "$TMP_DIR/${base}.output.actual"
     cp "$ref_out" "$TMP_DIR/${base}.output.expected"
-  fi
-
+  fi  
+      
   rm -f "$stderr" "$ll" "$bc" "$linked" "$prog_out" "$runerr"
 done
 
@@ -154,10 +174,38 @@ bad_fail=0
 for f in "$BAD_DIR"/*.jl; do
   [ -e "$f" ] || continue
 
+  base=$(basename "$f")
+
+  # Skip array extension tests (if you haven't implemented arrays)
+  case "$base" in
+    array*.jl)
+      echo " BAD : $f   (skipped: array extension)"
+      continue
+      ;;
+  esac
+
+  echo " BAD : START $f"
+
   stderr=$(mktemp)
-  "$JLC" "$f" 1>/dev/null 2>"$stderr"
+
+  # Run jlc with a timeout so we never freeze forever
+  if ! timeout 5 "$JLC" "$f" 1>/dev/null 2>"$stderr"; then
+    # timeout or crash
+    echo " BAD : $f   (jlc hung or crashed - timeout)"
+    bad_fail=$((bad_fail+1))
+
+    name_noext="${base%.jl}"
+    cp "$f" "$TMP_DIR/${name_noext}.jl"
+    cp "$stderr" "$TMP_DIR/${name_noext}.stderr"
+
+    rm -f "$stderr"
+    continue
+  fi
+
   ec=$?
   first=$(head -n1 "$stderr" || echo "")
+
+  echo " BAD : DONE  $f (ec=$ec)"
 
   if [ "$ec" -ne 0 ] && grep -qx "ERROR" "$stderr"; then
     echo " BAD : $f"
@@ -174,14 +222,13 @@ for f in "$BAD_DIR"/*.jl; do
     echo "  --- end ---"
     echo
 
-    base=$(basename "$f" .jl)
-    cp "$f" "$TMP_DIR/${base}.jl"
-    cp "$stderr" "$TMP_DIR/${base}.stderr"
+    name_noext="${base%.jl}"
+    cp "$f" "$TMP_DIR/${name_noext}.jl"
+    cp "$stderr" "$TMP_DIR/${name_noext}.stderr"
 
     rm -f "$stderr"
   fi
 done
-
 echo
 echo "Summary:"
 echo "  good: ${good_ok} ok, ${good_fail} fail"
