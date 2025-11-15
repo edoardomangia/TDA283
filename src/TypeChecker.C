@@ -245,6 +245,14 @@ TypeKind TypeChecker::lookupVar(const std::string &name)
             return found->second;
         }
     }
+
+    // NEW: distinguish between "function name" and "undeclared variable"
+    if (funEnv.count(name)) {
+        std::ostringstream oss;
+        oss << "'" << name << "' is a function, not a variable";
+        throw TypeError(oss.str());
+    }
+
     std::ostringstream oss;
     oss << "Use of undeclared variable '" << name << "'";
     throw TypeError(oss.str());
@@ -316,6 +324,13 @@ void TypeChecker::visitDecl(Decl *p)
 
 void TypeChecker::visitAss(Ass *p)
 {
+    // NEW: disallow assigning to a function
+    if (funEnv.count(p->ident_)) {
+        std::ostringstream oss;
+        oss << "Cannot assign to function '" << p->ident_ << "'";
+        throw TypeError(oss.str());
+    }
+
     TypeKind vt = lookupVar(p->ident_);
     if (!p->expr_) {
         throw TypeError("Internal error: assignment without expression");
