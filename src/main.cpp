@@ -8,6 +8,7 @@
 #include "ParserError.H"
 #include "Printer.H"
 #include "TypeChecker.H"
+#include "CodeGenLLVM.H"
 
 int main(int argc, char** argv)
 {
@@ -42,8 +43,13 @@ int main(int argc, char** argv)
             std::fclose(input);
             input = nullptr;
         }
+		
+		if (!prog) {
+			std::cerr << "ERROR\n";
+			return 1;
+		}
 
-        // (Optional) Pretty-print the AST for debugging:
+        // Pretty-print the AST for debugging:
         // PrintAbsyn printer;
         // char* pretty = printer.print(prog);
         // std::cout << pretty << std::endl;
@@ -51,6 +57,15 @@ int main(int argc, char** argv)
         // Type check
         TypeChecker tc;
         tc.checkProgram(prog);
+      	
+		Program* ast = dynamic_cast<Program*>(prog);
+        if (!ast) {
+            std::cerr << "ERROR\n";
+            delete prog;
+            return 1;
+        }
+		
+		generateLLVM(ast, std::cout);
 
         // If we reach here, everything is fine
         std::cerr << "OK\n";
@@ -66,8 +81,7 @@ int main(int argc, char** argv)
             delete prog;
         }
         std::cerr << "ERROR\n";
-        std::cerr << "Parse error at line " << e.getLine()
-                  << ": " << e.what() << "\n";
+        std::cerr << e.what() << "\n";
         return 1;
     }
     catch (const TypeError& e) {

@@ -60,7 +60,7 @@ for f in "$BAD_DIR"/*.jl; do
   ec=$?
   first=$(head -n1 "$stderr" || echo "")
 
-  if [ "$ec" -ne 0 ] && [ "$first" = "ERROR" ]; then
+  if [ "$ec" -ne 0 ] && grep -qx "ERROR" "$stderr"; then
     echo " BAD : $f"
     bad_ok=$((bad_ok+1))
     rm -f "$stderr"
