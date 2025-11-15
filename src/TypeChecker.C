@@ -57,6 +57,7 @@ bool stmtReturns(Stmt *s) {
 
 // ---------- TypeChecker core API ----------
 
+// Entry point for type checking: resets environments and prepares to analyze program.
 void TypeChecker::checkProgram(Prog *p)
 {
     funEnv.clear();
@@ -79,7 +80,8 @@ void TypeChecker::checkProgram(Prog *p)
         throw TypeError("Program must contain at least one function definition");
     }
 
-    // ---------- First pass: collect function signatures ----------
+    // First pass: gather all function signatures into funEnv.
+    // Checks duplicate functions, invalid parameters, and prepares function type info.
     bool hasValidMain = false;
 
     for (TopDef *td : *defs) {
@@ -108,6 +110,7 @@ void TypeChecker::checkProgram(Prog *p)
                     throw TypeError("Internal error: expected Argument");
                 }
                 std::string argName = arg->ident_;
+                // // Ensure all parameters in a function have unique names.
                 if (!argNames.insert(argName).second) {
                     std::ostringstream oss;
                     oss << "Duplicate parameter name '" << argName
@@ -116,7 +119,8 @@ void TypeChecker::checkProgram(Prog *p)
                 }
 
                 TypeKind at = fromAstType(arg->type_);
-                if (at == TypeKind::VOID) {
+                // Parameters cannot have type void.
+				if (at == TypeKind::VOID) {
                     std::ostringstream oss;
                     oss << "Parameter '" << argName
                         << "' of function '" << name
@@ -128,9 +132,9 @@ void TypeChecker::checkProgram(Prog *p)
         }
 
         funEnv[name] = { resultType, argTypes };
-
+		
+		// main must be int main()
         if (name == "main") {
-            // must be: int main()
             if (resultType != TypeKind::INT || !argTypes.empty()) {
                 throw TypeError("main must have type 'int' and no parameters");
             }
@@ -142,7 +146,9 @@ void TypeChecker::checkProgram(Prog *p)
         throw TypeError("Program must define 'int main()'");
     }
 
-    // ---------- Second pass: type-check bodies ----------
+    // --- Second pass: type-check bodies ---
+	// Second pass: use visitor to type-check all statements and expressions inside functions.
+
     for (TopDef *td : *defs) {
         FnDef *fn = dynamic_cast<FnDef*>(td);
         if (!fn) continue; // already checked
@@ -150,7 +156,7 @@ void TypeChecker::checkProgram(Prog *p)
         currentFunResult = fromAstType(fn->type_);
         currentFunDefinitelyReturns = false;
 
-        // New scope for parameters
+		// Set expected return type for this function and reset return tracking.
         pushScope();
         if (fn->listarg_) {
             for (Arg *a : *fn->listarg_) {
