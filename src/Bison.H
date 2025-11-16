@@ -101,7 +101,7 @@ extern int javalette_debug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 50 "Javalette.y"
+#line 51 "Javalette.y"
 
   int    _int;
   char   _char;

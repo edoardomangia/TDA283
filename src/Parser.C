@@ -72,7 +72,7 @@
 #define yynerrs         javalette_nerrs
 
 /* First part of user prologue.  */
-#line 20 "Javalette.y"
+#line 21 "Javalette.y"
 
 /* Begin C preamble code */
 
@@ -199,7 +199,7 @@ typedef enum yysymbol_kind_t yysymbol_kind_t;
 
 
 /* Second part of user prologue.  */
-#line 74 "Javalette.y"
+#line 75 "Javalette.y"
 
 void yyerror(YYLTYPE *loc, yyscan_t scanner, YYSTYPE *result, const char *msg)
 {
@@ -600,13 +600,13 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   154,   154,   156,   158,   159,   161,   163,   164,   165,
-     167,   169,   170,   172,   173,   174,   175,   176,   177,   178,
-     179,   180,   181,   182,   183,   185,   186,   188,   189,   191,
-     192,   193,   194,   200,   201,   202,   203,   204,   205,   206,
-     207,   209,   210,   211,   213,   214,   216,   217,   219,   220,
-     222,   223,   225,   226,   227,   229,   230,   231,   233,   234,
-     236,   237,   238,   240,   241,   242,   243,   244,   245
+       0,   155,   155,   157,   159,   160,   162,   164,   165,   166,
+     168,   170,   171,   173,   174,   175,   176,   177,   178,   179,
+     180,   181,   182,   183,   184,   186,   187,   189,   190,   192,
+     193,   194,   195,   201,   202,   203,   204,   205,   206,   207,
+     208,   210,   211,   212,   214,   215,   217,   218,   220,   221,
+     223,   224,   226,   227,   228,   230,   231,   232,   234,   235,
+     237,   238,   239,   241,   242,   243,   244,   245,   246
 };
 #endif
 
@@ -1379,403 +1379,403 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* Prog: ListTopDef  */
-#line 154 "Javalette.y"
+#line 155 "Javalette.y"
                   { std::reverse((yyvsp[0].listtopdef_)->begin(),(yyvsp[0].listtopdef_)->end()) ;(yyval.prog_) = new Program((yyvsp[0].listtopdef_)); result->prog_ = (yyval.prog_); }
 #line 1385 "Parser.C"
     break;
 
   case 3: /* TopDef: Type _IDENT_ _LPAREN ListArg _RPAREN Blk  */
-#line 156 "Javalette.y"
+#line 157 "Javalette.y"
                                                   { std::reverse((yyvsp[-2].listarg_)->begin(),(yyvsp[-2].listarg_)->end()) ;(yyval.topdef_) = new FnDef((yyvsp[-5].type_), (yyvsp[-4]._string), (yyvsp[-2].listarg_), (yyvsp[0].blk_)); }
 #line 1391 "Parser.C"
     break;
 
   case 4: /* ListTopDef: TopDef  */
-#line 158 "Javalette.y"
+#line 159 "Javalette.y"
                     { (yyval.listtopdef_) = new ListTopDef(); (yyval.listtopdef_)->push_back((yyvsp[0].topdef_)); }
 #line 1397 "Parser.C"
     break;
 
   case 5: /* ListTopDef: TopDef ListTopDef  */
-#line 159 "Javalette.y"
+#line 160 "Javalette.y"
                       { (yyvsp[0].listtopdef_)->push_back((yyvsp[-1].topdef_)); (yyval.listtopdef_) = (yyvsp[0].listtopdef_); }
 #line 1403 "Parser.C"
     break;
 
   case 6: /* Arg: Type _IDENT_  */
-#line 161 "Javalette.y"
+#line 162 "Javalette.y"
                    { (yyval.arg_) = new Argument((yyvsp[-1].type_), (yyvsp[0]._string)); }
 #line 1409 "Parser.C"
     break;
 
   case 7: /* ListArg: %empty  */
-#line 163 "Javalette.y"
+#line 164 "Javalette.y"
                       { (yyval.listarg_) = new ListArg(); }
 #line 1415 "Parser.C"
     break;
 
   case 8: /* ListArg: Arg  */
-#line 164 "Javalette.y"
+#line 165 "Javalette.y"
         { (yyval.listarg_) = new ListArg(); (yyval.listarg_)->push_back((yyvsp[0].arg_)); }
 #line 1421 "Parser.C"
     break;
 
   case 9: /* ListArg: Arg _COMMA ListArg  */
-#line 165 "Javalette.y"
+#line 166 "Javalette.y"
                        { (yyvsp[0].listarg_)->push_back((yyvsp[-2].arg_)); (yyval.listarg_) = (yyvsp[0].listarg_); }
 #line 1427 "Parser.C"
     break;
 
   case 10: /* Blk: _LBRACE ListStmt _RBRACE  */
-#line 167 "Javalette.y"
+#line 168 "Javalette.y"
                                { (yyval.blk_) = new Block((yyvsp[-1].liststmt_)); }
 #line 1433 "Parser.C"
     break;
 
   case 11: /* ListStmt: %empty  */
-#line 169 "Javalette.y"
+#line 170 "Javalette.y"
                        { (yyval.liststmt_) = new ListStmt(); }
 #line 1439 "Parser.C"
     break;
 
   case 12: /* ListStmt: ListStmt Stmt  */
-#line 170 "Javalette.y"
+#line 171 "Javalette.y"
                   { (yyvsp[-1].liststmt_)->push_back((yyvsp[0].stmt_)); (yyval.liststmt_) = (yyvsp[-1].liststmt_); }
 #line 1445 "Parser.C"
     break;
 
   case 13: /* Stmt: _SEMI  */
-#line 172 "Javalette.y"
+#line 173 "Javalette.y"
              { (yyval.stmt_) = new Empty(); }
 #line 1451 "Parser.C"
     break;
 
   case 14: /* Stmt: Blk  */
-#line 173 "Javalette.y"
+#line 174 "Javalette.y"
         { (yyval.stmt_) = new BStmt((yyvsp[0].blk_)); }
 #line 1457 "Parser.C"
     break;
 
   case 15: /* Stmt: Type ListItem _SEMI  */
-#line 174 "Javalette.y"
+#line 175 "Javalette.y"
                         { std::reverse((yyvsp[-1].listitem_)->begin(),(yyvsp[-1].listitem_)->end()) ;(yyval.stmt_) = new Decl((yyvsp[-2].type_), (yyvsp[-1].listitem_)); }
 #line 1463 "Parser.C"
     break;
 
   case 16: /* Stmt: _IDENT_ _EQ Expr _SEMI  */
-#line 175 "Javalette.y"
+#line 176 "Javalette.y"
                            { (yyval.stmt_) = new Ass((yyvsp[-3]._string), (yyvsp[-1].expr_)); }
 #line 1469 "Parser.C"
     break;
 
   case 17: /* Stmt: _IDENT_ _DPLUS _SEMI  */
-#line 176 "Javalette.y"
+#line 177 "Javalette.y"
                          { (yyval.stmt_) = new Incr((yyvsp[-2]._string)); }
 #line 1475 "Parser.C"
     break;
 
   case 18: /* Stmt: _IDENT_ _DMINUS _SEMI  */
-#line 177 "Javalette.y"
+#line 178 "Javalette.y"
                           { (yyval.stmt_) = new Decr((yyvsp[-2]._string)); }
 #line 1481 "Parser.C"
     break;
 
   case 19: /* Stmt: _KW_return Expr _SEMI  */
-#line 178 "Javalette.y"
+#line 179 "Javalette.y"
                           { (yyval.stmt_) = new Ret((yyvsp[-1].expr_)); }
 #line 1487 "Parser.C"
     break;
 
   case 20: /* Stmt: _KW_return _SEMI  */
-#line 179 "Javalette.y"
+#line 180 "Javalette.y"
                      { (yyval.stmt_) = new VRet(); }
 #line 1493 "Parser.C"
     break;
 
   case 21: /* Stmt: _KW_if _LPAREN Expr _RPAREN Stmt  */
-#line 180 "Javalette.y"
+#line 181 "Javalette.y"
                                      { (yyval.stmt_) = new Cond((yyvsp[-2].expr_), (yyvsp[0].stmt_)); }
 #line 1499 "Parser.C"
     break;
 
   case 22: /* Stmt: _KW_if _LPAREN Expr _RPAREN Stmt _KW_else Stmt  */
-#line 181 "Javalette.y"
+#line 182 "Javalette.y"
                                                    { (yyval.stmt_) = new CondElse((yyvsp[-4].expr_), (yyvsp[-2].stmt_), (yyvsp[0].stmt_)); }
 #line 1505 "Parser.C"
     break;
 
   case 23: /* Stmt: _KW_while _LPAREN Expr _RPAREN Stmt  */
-#line 182 "Javalette.y"
+#line 183 "Javalette.y"
                                         { (yyval.stmt_) = new While((yyvsp[-2].expr_), (yyvsp[0].stmt_)); }
 #line 1511 "Parser.C"
     break;
 
   case 24: /* Stmt: Expr _SEMI  */
-#line 183 "Javalette.y"
+#line 184 "Javalette.y"
                { (yyval.stmt_) = new SExp((yyvsp[-1].expr_)); }
 #line 1517 "Parser.C"
     break;
 
   case 25: /* Item: _IDENT_  */
-#line 185 "Javalette.y"
+#line 186 "Javalette.y"
                { (yyval.item_) = new NoInit((yyvsp[0]._string)); }
 #line 1523 "Parser.C"
     break;
 
   case 26: /* Item: _IDENT_ _EQ Expr  */
-#line 186 "Javalette.y"
+#line 187 "Javalette.y"
                      { (yyval.item_) = new Init((yyvsp[-2]._string), (yyvsp[0].expr_)); }
 #line 1529 "Parser.C"
     break;
 
   case 27: /* ListItem: Item  */
-#line 188 "Javalette.y"
+#line 189 "Javalette.y"
                 { (yyval.listitem_) = new ListItem(); (yyval.listitem_)->push_back((yyvsp[0].item_)); }
 #line 1535 "Parser.C"
     break;
 
   case 28: /* ListItem: Item _COMMA ListItem  */
-#line 189 "Javalette.y"
+#line 190 "Javalette.y"
                          { (yyvsp[0].listitem_)->push_back((yyvsp[-2].item_)); (yyval.listitem_) = (yyvsp[0].listitem_); }
 #line 1541 "Parser.C"
     break;
 
   case 29: /* Type: _KW_int  */
-#line 191 "Javalette.y"
+#line 192 "Javalette.y"
                { (yyval.type_) = new Int(); }
 #line 1547 "Parser.C"
     break;
 
   case 30: /* Type: _KW_double  */
-#line 192 "Javalette.y"
+#line 193 "Javalette.y"
                { (yyval.type_) = new Doub(); }
 #line 1553 "Parser.C"
     break;
 
   case 31: /* Type: _KW_boolean  */
-#line 193 "Javalette.y"
+#line 194 "Javalette.y"
                 { (yyval.type_) = new Bool(); }
 #line 1559 "Parser.C"
     break;
 
   case 32: /* Type: _KW_void  */
-#line 194 "Javalette.y"
+#line 195 "Javalette.y"
              { (yyval.type_) = new Void(); }
 #line 1565 "Parser.C"
     break;
 
   case 33: /* Expr6: _IDENT_  */
-#line 200 "Javalette.y"
+#line 201 "Javalette.y"
                 { (yyval.expr_) = new EVar((yyvsp[0]._string)); }
 #line 1571 "Parser.C"
     break;
 
   case 34: /* Expr6: _INTEGER_  */
-#line 201 "Javalette.y"
+#line 202 "Javalette.y"
               { (yyval.expr_) = new ELitInt((yyvsp[0]._int)); }
 #line 1577 "Parser.C"
     break;
 
   case 35: /* Expr6: _DOUBLE_  */
-#line 202 "Javalette.y"
+#line 203 "Javalette.y"
              { (yyval.expr_) = new ELitDoub((yyvsp[0]._double)); }
 #line 1583 "Parser.C"
     break;
 
   case 36: /* Expr6: _KW_true  */
-#line 203 "Javalette.y"
+#line 204 "Javalette.y"
              { (yyval.expr_) = new ELitTrue(); }
 #line 1589 "Parser.C"
     break;
 
   case 37: /* Expr6: _KW_false  */
-#line 204 "Javalette.y"
+#line 205 "Javalette.y"
               { (yyval.expr_) = new ELitFalse(); }
 #line 1595 "Parser.C"
     break;
 
   case 38: /* Expr6: _IDENT_ _LPAREN ListExpr _RPAREN  */
-#line 205 "Javalette.y"
+#line 206 "Javalette.y"
                                      { std::reverse((yyvsp[-1].listexpr_)->begin(),(yyvsp[-1].listexpr_)->end()) ;(yyval.expr_) = new EApp((yyvsp[-3]._string), (yyvsp[-1].listexpr_)); }
 #line 1601 "Parser.C"
     break;
 
   case 39: /* Expr6: _STRING_  */
-#line 206 "Javalette.y"
+#line 207 "Javalette.y"
              { (yyval.expr_) = new EString((yyvsp[0]._string)); }
 #line 1607 "Parser.C"
     break;
 
   case 40: /* Expr6: _LPAREN Expr _RPAREN  */
-#line 207 "Javalette.y"
+#line 208 "Javalette.y"
                          { (yyval.expr_) = (yyvsp[-1].expr_); }
 #line 1613 "Parser.C"
     break;
 
   case 41: /* Expr5: _MINUS Expr6  */
-#line 209 "Javalette.y"
+#line 210 "Javalette.y"
                      { (yyval.expr_) = new Neg((yyvsp[0].expr_)); }
 #line 1619 "Parser.C"
     break;
 
   case 42: /* Expr5: _BANG Expr6  */
-#line 210 "Javalette.y"
+#line 211 "Javalette.y"
                 { (yyval.expr_) = new Not((yyvsp[0].expr_)); }
 #line 1625 "Parser.C"
     break;
 
   case 43: /* Expr5: Expr6  */
-#line 211 "Javalette.y"
+#line 212 "Javalette.y"
           { (yyval.expr_) = (yyvsp[0].expr_); }
 #line 1631 "Parser.C"
     break;
 
   case 44: /* Expr4: Expr4 MulOp Expr5  */
-#line 213 "Javalette.y"
+#line 214 "Javalette.y"
                           { (yyval.expr_) = new EMul((yyvsp[-2].expr_), (yyvsp[-1].mulop_), (yyvsp[0].expr_)); }
 #line 1637 "Parser.C"
     break;
 
   case 45: /* Expr4: Expr5  */
-#line 214 "Javalette.y"
+#line 215 "Javalette.y"
           { (yyval.expr_) = (yyvsp[0].expr_); }
 #line 1643 "Parser.C"
     break;
 
   case 46: /* Expr3: Expr3 AddOp Expr4  */
-#line 216 "Javalette.y"
+#line 217 "Javalette.y"
                           { (yyval.expr_) = new EAdd((yyvsp[-2].expr_), (yyvsp[-1].addop_), (yyvsp[0].expr_)); }
 #line 1649 "Parser.C"
     break;
 
   case 47: /* Expr3: Expr4  */
-#line 217 "Javalette.y"
+#line 218 "Javalette.y"
           { (yyval.expr_) = (yyvsp[0].expr_); }
 #line 1655 "Parser.C"
     break;
 
   case 48: /* Expr2: Expr2 RelOp Expr3  */
-#line 219 "Javalette.y"
+#line 220 "Javalette.y"
                           { (yyval.expr_) = new ERel((yyvsp[-2].expr_), (yyvsp[-1].relop_), (yyvsp[0].expr_)); }
 #line 1661 "Parser.C"
     break;
 
   case 49: /* Expr2: Expr3  */
-#line 220 "Javalette.y"
+#line 221 "Javalette.y"
           { (yyval.expr_) = (yyvsp[0].expr_); }
 #line 1667 "Parser.C"
     break;
 
   case 50: /* Expr1: Expr2 _DAMP Expr1  */
-#line 222 "Javalette.y"
+#line 223 "Javalette.y"
                           { (yyval.expr_) = new EAnd((yyvsp[-2].expr_), (yyvsp[0].expr_)); }
 #line 1673 "Parser.C"
     break;
 
   case 51: /* Expr1: Expr2  */
-#line 223 "Javalette.y"
+#line 224 "Javalette.y"
           { (yyval.expr_) = (yyvsp[0].expr_); }
 #line 1679 "Parser.C"
     break;
 
   case 52: /* Expr: Expr1 _DBAR Expr  */
-#line 225 "Javalette.y"
+#line 226 "Javalette.y"
                         { (yyval.expr_) = new EOr((yyvsp[-2].expr_), (yyvsp[0].expr_)); }
 #line 1685 "Parser.C"
     break;
 
   case 53: /* Expr: Expr1  */
-#line 226 "Javalette.y"
+#line 227 "Javalette.y"
           { (yyval.expr_) = (yyvsp[0].expr_); }
 #line 1691 "Parser.C"
     break;
 
   case 54: /* Expr: Type _AT Expr  */
-#line 227 "Javalette.y"
+#line 228 "Javalette.y"
                   { (yyval.expr_) = new EAnnotExp((yyvsp[-2].type_), (yyvsp[0].expr_)); }
 #line 1697 "Parser.C"
     break;
 
   case 55: /* ListExpr: %empty  */
-#line 229 "Javalette.y"
+#line 230 "Javalette.y"
                        { (yyval.listexpr_) = new ListExpr(); }
 #line 1703 "Parser.C"
     break;
 
   case 56: /* ListExpr: Expr  */
-#line 230 "Javalette.y"
+#line 231 "Javalette.y"
          { (yyval.listexpr_) = new ListExpr(); (yyval.listexpr_)->push_back((yyvsp[0].expr_)); }
 #line 1709 "Parser.C"
     break;
 
   case 57: /* ListExpr: Expr _COMMA ListExpr  */
-#line 231 "Javalette.y"
+#line 232 "Javalette.y"
                          { (yyvsp[0].listexpr_)->push_back((yyvsp[-2].expr_)); (yyval.listexpr_) = (yyvsp[0].listexpr_); }
 #line 1715 "Parser.C"
     break;
 
   case 58: /* AddOp: _PLUS  */
-#line 233 "Javalette.y"
+#line 234 "Javalette.y"
               { (yyval.addop_) = new Plus(); }
 #line 1721 "Parser.C"
     break;
 
   case 59: /* AddOp: _MINUS  */
-#line 234 "Javalette.y"
+#line 235 "Javalette.y"
            { (yyval.addop_) = new Minus(); }
 #line 1727 "Parser.C"
     break;
 
   case 60: /* MulOp: _STAR  */
-#line 236 "Javalette.y"
+#line 237 "Javalette.y"
               { (yyval.mulop_) = new Times(); }
 #line 1733 "Parser.C"
     break;
 
   case 61: /* MulOp: _SLASH  */
-#line 237 "Javalette.y"
+#line 238 "Javalette.y"
            { (yyval.mulop_) = new Div(); }
 #line 1739 "Parser.C"
     break;
 
   case 62: /* MulOp: _PERCENT  */
-#line 238 "Javalette.y"
+#line 239 "Javalette.y"
              { (yyval.mulop_) = new Mod(); }
 #line 1745 "Parser.C"
     break;
 
   case 63: /* RelOp: _LT  */
-#line 240 "Javalette.y"
+#line 241 "Javalette.y"
             { (yyval.relop_) = new LTH(); }
 #line 1751 "Parser.C"
     break;
 
   case 64: /* RelOp: _LDARROW  */
-#line 241 "Javalette.y"
+#line 242 "Javalette.y"
              { (yyval.relop_) = new LE(); }
 #line 1757 "Parser.C"
     break;
 
   case 65: /* RelOp: _GT  */
-#line 242 "Javalette.y"
+#line 243 "Javalette.y"
         { (yyval.relop_) = new GTH(); }
 #line 1763 "Parser.C"
     break;
 
   case 66: /* RelOp: _GTEQ  */
-#line 243 "Javalette.y"
+#line 244 "Javalette.y"
           { (yyval.relop_) = new GE(); }
 #line 1769 "Parser.C"
     break;
 
   case 67: /* RelOp: _DEQ  */
-#line 244 "Javalette.y"
+#line 245 "Javalette.y"
          { (yyval.relop_) = new EQU(); }
 #line 1775 "Parser.C"
     break;
 
   case 68: /* RelOp: _BANGEQ  */
-#line 245 "Javalette.y"
+#line 246 "Javalette.y"
             { (yyval.relop_) = new NE(); }
 #line 1781 "Parser.C"
     break;
@@ -1979,7 +1979,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 248 "Javalette.y"
+#line 249 "Javalette.y"
 
 
 
