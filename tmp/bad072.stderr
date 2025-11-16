@@ -1,0 +1,2 @@
+ERROR
+Type error: Parameter 'x' of function 'foo' cannot have type void

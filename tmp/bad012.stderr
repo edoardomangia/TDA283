@@ -1,0 +1,2 @@
+ERROR
+Type error: Function 'foo' may finish without returning a value of type int

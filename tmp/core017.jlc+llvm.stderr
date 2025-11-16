@@ -1,0 +1,16 @@
+OK
+llvm-as: assembly parsed, but does not verify as correct!
+PHI node entries do not match predecessors!
+  %t5 = phi i1 [ false, %L4 ], [ %t4, %L3 ]
+label %L3
+label %L4
+Instruction does not dominate all uses!
+  %t4 = phi i1 [ false, %L7 ], [ true, %L6 ]
+  %t5 = phi i1 [ false, %L4 ], [ %t4, %L3 ]
+PHI node entries do not match predecessors!
+  %t19 = phi i1 [ false, %L16 ], [ %t18, %L15 ]
+label %L15
+label %L16
+Instruction does not dominate all uses!
+  %t18 = phi i1 [ false, %L19 ], [ true, %L18 ]
+  %t19 = phi i1 [ false, %L16 ], [ %t18, %L15 ]

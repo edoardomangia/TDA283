@@ -1,0 +1,2 @@
+ERROR
+Type error: Return type mismatch: expected int, got boolean
