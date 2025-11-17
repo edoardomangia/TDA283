@@ -189,8 +189,11 @@ for f in "$BAD_DIR"/*.jl; do
   stderr=$(mktemp)
 
   # Run jlc with a timeout so we never freeze forever
-  if ! timeout 5 "$JLC" "$f" 1>/dev/null 2>"$stderr"; then
-    # timeout or crash
+  timeout 5 "$JLC" "$f" 1>/dev/null 2>"$stderr"
+  ec=$?
+
+  # 124 is the special exit code for timeout
+  if [ "$ec" -eq 124 ]; then
     echo " BAD : $f   (jlc hung or crashed - timeout)"
     bad_fail=$((bad_fail+1))
 
@@ -202,12 +205,12 @@ for f in "$BAD_DIR"/*.jl; do
     continue
   fi
 
-  ec=$?
   first=$(head -n1 "$stderr" || echo "")
 
   echo " BAD : DONE  $f (ec=$ec)"
 
-  if [ "$ec" -ne 0 ] && grep -qx "ERROR" "$stderr"; then
+  # For bad programs we expect: non-zero exit AND first line "ERROR"
+  if [ "$ec" -ne 0 ] && [ "$first" = "ERROR" ]; then
     echo " BAD : $f"
     bad_ok=$((bad_ok+1))
     rm -f "$stderr"
@@ -229,6 +232,7 @@ for f in "$BAD_DIR"/*.jl; do
     rm -f "$stderr"
   fi
 done
+
 echo
 echo "Summary:"
 echo "  good: ${good_ok} ok, ${good_fail} fail"

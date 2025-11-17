@@ -1,0 +1,2 @@
+error: 1,23: syntax error at }
+ERROR

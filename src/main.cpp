@@ -37,7 +37,9 @@ int main(int argc, char** argv)
 
     try {
         // Parse the program
+        std::cerr << "DEBUG: Starting parse\n";
         prog = pProg(input);
+        std::cerr << "DEBUG: Finished parse\n";
 
         if (input && input != stdin) {
             std::fclose(input);
@@ -55,8 +57,10 @@ int main(int argc, char** argv)
         // std::cout << pretty << std::endl;
 
         // Type check
+        std::cerr << "DEBUG: Starting typecheck\n";
         TypeChecker tc;
         tc.checkProgram(prog);
+        std::cerr << "DEBUG: Starting typecheck\n";
       	
 		Program* ast = dynamic_cast<Program*>(prog);
         if (!ast) {
@@ -65,7 +69,9 @@ int main(int argc, char** argv)
             return 1;
         }
 		
+        std::cerr << "DEBUG: Starting codegen\n";
 		generateLLVM(ast, std::cout);
+        std::cerr << "DEBUG: Starting codegen\n";
 
         // If we reach here, everything is fine
         std::cerr << "OK\n";

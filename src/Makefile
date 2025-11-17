@@ -1,67 +1,64 @@
-## Makefile
+CC      = g++
+CXXFLAGS = -g -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function
 
-CC=g++ -g
-CCFLAGS= -std=c++17 -W -Wall -Wsign-conversion -Wno-unused-parameter -Wno-unused-function -Wno-unneeded-internal-declaration
+FLEX    = flex
+FLEX_OPTS = -Pjavalette_
 
-FLEX=flex
-FLEX_OPTS=-Pjavalette_
+BISON   = bison
+BISON_OPTS = -t -pjavalette_
 
-BISON=bison
-BISON_OPTS=-t -pjavalette_
+# Objects for your real compiler:
+OBJS = Absyn.o Buffer.o Lexer.o Parser.o Printer.o Skeleton.o TypeChecker.o CodeGenLLVM.o main.o
 
-OBJS=Absyn.o Buffer.o Lexer.o Parser.o Printer.o Skeleton.o TypeChecker.o CodeGenLLVM.o
- 
-.PHONY : clean distclean
+.PHONY: all clean distclean
 
-all : jlc
+# Build your compiler
+all: jlc
 
-jlc : ${OBJS} main.o
-	${CC} ${OBJS} main.o -o jlc
+jlc: $(OBJS)
+	@echo "Linking jlc..."
+	$(CC) $(CXXFLAGS) $(OBJS) -o jlc
 
-Absyn.o : Absyn.C Absyn.H
-	${CC} ${CCFLAGS} -c Absyn.C
+# --- BNFC-generated stuff ---
 
-Buffer.o : Buffer.C Buffer.H
-	${CC} ${CCFLAGS} -c Buffer.C
+Absyn.o: Absyn.C Absyn.H
+	$(CC) $(CXXFLAGS) -c Absyn.C
 
-Lexer.C : Javalette.l
-	${FLEX} ${FLEX_OPTS} -oLexer.C Javalette.l
+Buffer.o: Buffer.C Buffer.H
+	$(CC) $(CXXFLAGS) -c Buffer.C
 
-Parser.C Bison.H : Javalette.y
-	${BISON} ${BISON_OPTS} Javalette.y -o Parser.C
+Lexer.C: Javalette.l
+	$(FLEX) $(FLEX_OPTS) -oLexer.C Javalette.l
 
-Lexer.o : CCFLAGS+= -Wno-sign-conversion
+Parser.C Bison.H: Javalette.y
+	$(BISON) $(BISON_OPTS) Javalette.y -o Parser.C
 
-Lexer.o : Lexer.C Bison.H
-	${CC} ${CCFLAGS} -c Lexer.C
+Lexer.o: Lexer.C Bison.H
+	$(CC) $(CXXFLAGS) -Wno-sign-conversion -c Lexer.C
 
-Parser.o : Parser.C Absyn.H Bison.H
-	${CC} ${CCFLAGS} -c Parser.C
+Parser.o: Parser.C Absyn.H Bison.H
+	$(CC) $(CXXFLAGS) -c Parser.C
 
-Printer.o : Printer.C Printer.H Absyn.H
-	${CC} ${CCFLAGS} -c Printer.C
+Printer.o: Printer.C Printer.H Absyn.H
+	$(CC) $(CXXFLAGS) -c Printer.C
 
-Skeleton.o : Skeleton.C Skeleton.H Absyn.H
-	${CC} ${CCFLAGS} -Wno-unused-parameter -c Skeleton.C
+# --- Your own files ---
 
-TypeChecker.o : TypeChecker.C TypeChecker.H Absyn.H Skeleton.H
-	${CC} ${CCFLAGS} -c TypeChecker.C 
+TypeChecker.o: TypeChecker.C TypeChecker.H Absyn.H
+	$(CC) $(CXXFLAGS) -c TypeChecker.C
 
-CodeGenLLVM.o : CodeGenLLVM.cpp CodeGenLLVM.H Absyn.H
-	${CC} ${CCFLAGS} -c CodeGenLLVM.cpp 
+CodeGenLLVM.o: CodeGenLLVM.cpp CodeGenLLVM.H Absyn.H
+	$(CC) $(CXXFLAGS) -c CodeGenLLVM.cpp
 
-main.o : main.cpp
-	${CC} ${CCFLAGS} -c main.cpp 
+main.o: main.cpp Absyn.H Parser.H TypeChecker.H CodeGenLLVM.H
+	$(CC) $(CXXFLAGS) -c main.cpp
 
-# Test.o : Test.C Parser.H Printer.H Absyn.H
-#	${CC} ${CCFLAGS} -c Test.C
+clean:
+	rm -f *.o jlc TestJavalette Javalette.aux Javalette.log Javalette.pdf \
+	      Javalette.dvi Javalette.ps Javalette
 
-test:
-	./test.sh
-
-clean :
-	rm -f *.o jlc Javalette.aux Javalette.log Javalette.pdf Javalette.dvi Javalette.ps Javalette
-
-distclean : clean
-	rm -f Absyn.C Absyn.H Buffer.C Buffer.H Test.C Bison.H Parser.C Parser.H ParserError.H Javalette.y Lexer.C Javalette.l Skeleton.C Skeleton.H Printer.C Printer.H Makefile Javalette.tex
+distclean: clean
+	rm -f Absyn.C Absyn.H Buffer.C Buffer.H Test.C Bison.H Parser.C Parser.H \
+	      ParserError.H Javalette.y Lexer.C Javalette.l Skeleton.C Skeleton.H \
+	      Printer.C Printer.H Makefile Javalette.tex
 
