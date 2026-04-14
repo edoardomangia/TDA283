@@ -1,76 +1,201 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
+@.str.0 = private constant [9 x i8] c"hello */\00"
+@.str.1 = private constant [9 x i8] c"/* world\00"
 
-[Abstract Syntax]
-(Program [(FnDef [Int] "main" [] [(Block [(SExp [(EApp "printInt" [(EApp "fac" [(ELitInt 10)] )] )] ), (SExp [(EApp "printInt" [(EApp "rfac" [(ELitInt 10)] )] )] ), (SExp [(EApp "printInt" [(EApp "mfac" [(ELitInt 10)] )] )] ), (SExp [(EApp "printInt" [(EApp "ifac" [(ELitInt 10)] )] )] ), (Decl [Doub] [(NoInit "r")] ), (BStmt [(Block [(Decl [Int] [(Init "n" [(ELitInt 10)])] ), (Decl [Int] [(Init "r" [(ELitInt 1)])] ), (While [(ERel (EVar "n") [GTH] (ELitInt 0))] [(BStmt [(Block [(Ass "r" [(EMul (EVar "r") [Times] (EVar "n"))] ), (Decr "n" )] )])]), (SExp [(EApp "printInt" [(EVar "r")] )] )] )]), (SExp [(EApp "printDouble" [(EApp "dfac" [(ELitDoub 10)] )] )] ), (SExp [(EApp "printString" [(EString "hello */")] )] ), (SExp [(EApp "printString" [(EString "/* world")] )] ), (Ret [(ELitInt 0)] )] )]), (FnDef [Int] "fac" [(Argument [Int] "a")] [(Block [(Decl [Int] [(NoInit "r")] ), (Decl [Int] [(NoInit "n")] ), (Ass "r" [(ELitInt 1)] ), (Ass "n" [(EVar "a")] ), (While [(ERel (EVar "n") [GTH] (ELitInt 0))] [(BStmt [(Block [(Ass "r" [(EMul (EVar "r") [Times] (EVar "n"))] ), (Ass "n" [(EAdd (EVar "n") [Minus] (ELitInt 1))] )] )])]), (Ret [(EVar "r")] )] )]), (FnDef [Int] "rfac" [(Argument [Int] "n")] [(Block [(CondElse [(ERel (EVar "n") [EQU] (ELitInt 0))] (Ret [(ELitInt 1)] ) (Ret [(EMul (EVar "n") [Times] (EApp "rfac" [(EAdd (EVar "n") [Minus] (ELitInt 1))] ))] ))] )]), (FnDef [Int] "mfac" [(Argument [Int] "n")] [(Block [(CondElse [(ERel (EVar "n") [EQU] (ELitInt 0))] (Ret [(ELitInt 1)] ) (Ret [(EMul (EVar "n") [Times] (EApp "nfac" [(EAdd (EVar "n") [Minus] (ELitInt 1))] ))] ))] )]), (FnDef [Int] "nfac" [(Argument [Int] "n")] [(Block [(CondElse [(ERel (EVar "n") [NE] (ELitInt 0))] (Ret [(EMul (EApp "mfac" [(EAdd (EVar "n") [Minus] (ELitInt 1))] ) [Times] (EVar "n"))] ) (Ret [(ELitInt 1)] ))] )]), (FnDef [Doub] "dfac" [(Argument [Doub] "n")] [(Block [(CondElse [(ERel (EVar "n") [EQU] (ELitDoub 0))] (Ret [(ELitDoub 1)] ) (Ret [(EMul (EVar "n") [Times] (EApp "dfac" [(EAdd (EVar "n") [Minus] (ELitDoub 1))] ))] ))] )]), (FnDef [Int] "ifac" [(Argument [Int] "n")] [(Block [(Ret [(EApp "ifac2f" [(ELitInt 1), (EVar "n")] )] )] )]), (FnDef [Int] "ifac2f" [(Argument [Int] "l"), (Argument [Int] "h")] [(Block [(Cond [(ERel (EVar "l") [EQU] (EVar "h"))] [(Ret [(EVar "l")] )]), (Cond [(ERel (EVar "l") [GTH] (EVar "h"))] [(Ret [(ELitInt 1)] )]), (Decl [Int] [(NoInit "m")] ), (Ass "m" [(EMul (EAdd (EVar "l") [Plus] (EVar "h")) [Div] (ELitInt 2))] ), (Ret [(EMul (EApp "ifac2f" [(EVar "l"), (EVar "m")] ) [Times] (EApp "ifac2f" [(EAdd (EVar "m") [Plus] (ELitInt 1)), (EVar "h")] ))] )] )])])
-
-[Linearized Tree]
-int main ()
-{
-  printInt (fac (10));
-  printInt (rfac (10));
-  printInt (mfac (10));
-  printInt (ifac (10));
-  double r;
-  {
-    int n = 10;
-    int r = 1;
-    while (n > 0)
-    {
-      r = r * n;
-      n --;
-    }
-    printInt (r);
-  }
-  printDouble (dfac (10));
-  printString ("hello */");
-  printString ("/* world");
-  return 0;
-}
-int fac (int a)
-{
-  int r;
-  int n;
-  r = 1;
-  n = a;
-  while (n > 0)
-  {
-    r = r * n;
-    n = n - 1;
-  }
-  return r;
-}
-int rfac (int n)
-{
-  if (n == 0) return 1;
-  else return n * rfac (n - 1);
-}
-int mfac (int n)
-{
-  if (n == 0) return 1;
-  else return n * nfac (n - 1);
-}
-int nfac (int n)
-{
-  if (n != 0) return mfac (n - 1) * n;
-  else return 1;
-}
-double dfac (double n)
-{
-  if (n == 0) return 1;
-  else return n * dfac (n - 1);
-}
-int ifac (int n)
-{
-  return ifac2f (1, n);
-}
-int ifac2f (int l, int h)
-{
-  if (l == h) return l;
-  if (l > h) return 1;
-  int m;
-  m = (l + h) / 2;
-  return ifac2f (l, m) * ifac2f (m + 1, h);
+define i32 @main() {
+entry:
+  %t0 = call i32 @fac(i32 10)
+  call void @printInt(i32 %t0)
+  %t1 = call i32 @rfac(i32 10)
+  call void @printInt(i32 %t1)
+  %t2 = call i32 @mfac(i32 10)
+  call void @printInt(i32 %t2)
+  %t3 = call i32 @ifac(i32 10)
+  call void @printInt(i32 %t3)
+  %t4 = alloca double
+  store double 0.0, double* %t4
+  %t5 = alloca i32
+  store i32 10, i32* %t5
+  %t6 = alloca i32
+  store i32 1, i32* %t6
+  br label %L0
+L0:
+  %t7 = load i32, i32* %t5
+  %t8 = icmp sgt i32 %t7, 0
+  br i1 %t8, label %L1, label %L2
+L1:
+  %t9 = load i32, i32* %t6
+  %t10 = load i32, i32* %t5
+  %t11 = mul i32 %t9, %t10
+  store i32 %t11, i32* %t6
+  %t12 = load i32, i32* %t5
+  %t13 = sub i32 %t12, 1
+  store i32 %t13, i32* %t5
+  br label %L0
+L2:
+  %t14 = load i32, i32* %t6
+  call void @printInt(i32 %t14)
+  %t15 = call double @dfac(double 10.000000)
+  call void @printDouble(double %t15)
+  %t16 = getelementptr [9 x i8], [9 x i8]* @.str.0, i32 0, i32 0
+  call void @printString(i8* %t16)
+  %t17 = getelementptr [9 x i8], [9 x i8]* @.str.1, i32 0, i32 0
+  call void @printString(i8* %t17)
+  ret i32 0
 }
 
+define i32 @fac(i32 %__p__a) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__a, i32* %t0
+  %t1 = alloca i32
+  store i32 0, i32* %t1
+  %t2 = alloca i32
+  store i32 0, i32* %t2
+  store i32 1, i32* %t1
+  %t3 = load i32, i32* %t0
+  store i32 %t3, i32* %t2
+  br label %L0
+L0:
+  %t4 = load i32, i32* %t2
+  %t5 = icmp sgt i32 %t4, 0
+  br i1 %t5, label %L1, label %L2
+L1:
+  %t6 = load i32, i32* %t1
+  %t7 = load i32, i32* %t2
+  %t8 = mul i32 %t6, %t7
+  store i32 %t8, i32* %t1
+  %t9 = load i32, i32* %t2
+  %t10 = sub i32 %t9, 1
+  store i32 %t10, i32* %t2
+  br label %L0
+L2:
+  %t11 = load i32, i32* %t1
+  ret i32 %t11
+}
+
+define i32 @rfac(i32 %__p__n) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__n, i32* %t0
+  %t1 = load i32, i32* %t0
+  %t2 = icmp eq i32 %t1, 0
+  br i1 %t2, label %L0, label %L1
+L0:
+  ret i32 1
+L1:
+  %t3 = load i32, i32* %t0
+  %t4 = load i32, i32* %t0
+  %t5 = sub i32 %t4, 1
+  %t6 = call i32 @rfac(i32 %t5)
+  %t7 = mul i32 %t3, %t6
+  ret i32 %t7
+}
+
+define i32 @mfac(i32 %__p__n) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__n, i32* %t0
+  %t1 = load i32, i32* %t0
+  %t2 = icmp eq i32 %t1, 0
+  br i1 %t2, label %L0, label %L1
+L0:
+  ret i32 1
+L1:
+  %t3 = load i32, i32* %t0
+  %t4 = load i32, i32* %t0
+  %t5 = sub i32 %t4, 1
+  %t6 = call i32 @nfac(i32 %t5)
+  %t7 = mul i32 %t3, %t6
+  ret i32 %t7
+}
+
+define i32 @nfac(i32 %__p__n) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__n, i32* %t0
+  %t1 = load i32, i32* %t0
+  %t2 = icmp ne i32 %t1, 0
+  br i1 %t2, label %L0, label %L1
+L0:
+  %t3 = load i32, i32* %t0
+  %t4 = sub i32 %t3, 1
+  %t5 = call i32 @mfac(i32 %t4)
+  %t6 = load i32, i32* %t0
+  %t7 = mul i32 %t5, %t6
+  ret i32 %t7
+L1:
+  ret i32 1
+}
+
+define double @dfac(double %__p__n) {
+entry:
+  %t0 = alloca double
+  store double %__p__n, double* %t0
+  %t1 = load double, double* %t0
+  %t2 = fcmp oeq double %t1, 0.000000
+  br i1 %t2, label %L0, label %L1
+L0:
+  ret double 1.000000
+L1:
+  %t3 = load double, double* %t0
+  %t4 = load double, double* %t0
+  %t5 = fsub double %t4, 1.000000
+  %t6 = call double @dfac(double %t5)
+  %t7 = fmul double %t3, %t6
+  ret double %t7
+}
+
+define i32 @ifac(i32 %__p__n) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__n, i32* %t0
+  %t1 = load i32, i32* %t0
+  %t2 = call i32 @ifac2f(i32 1, i32 %t1)
+  ret i32 %t2
+}
+
+define i32 @ifac2f(i32 %__p__l, i32 %__p__h) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__l, i32* %t0
+  %t1 = alloca i32
+  store i32 %__p__h, i32* %t1
+  %t2 = load i32, i32* %t0
+  %t3 = load i32, i32* %t1
+  %t4 = icmp eq i32 %t2, %t3
+  br i1 %t4, label %L0, label %L1
+L0:
+  %t5 = load i32, i32* %t0
+  ret i32 %t5
+L1:
+  %t6 = load i32, i32* %t0
+  %t7 = load i32, i32* %t1
+  %t8 = icmp sgt i32 %t6, %t7
+  br i1 %t8, label %L2, label %L3
+L2:
+  ret i32 1
+L3:
+  %t9 = alloca i32
+  store i32 0, i32* %t9
+  %t10 = load i32, i32* %t0
+  %t11 = load i32, i32* %t1
+  %t12 = add i32 %t10, %t11
+  %t13 = sdiv i32 %t12, 2
+  store i32 %t13, i32* %t9
+  %t14 = load i32, i32* %t0
+  %t15 = load i32, i32* %t9
+  %t16 = call i32 @ifac2f(i32 %t14, i32 %t15)
+  %t17 = load i32, i32* %t9
+  %t18 = add i32 %t17, 1
+  %t19 = load i32, i32* %t1
+  %t20 = call i32 @ifac2f(i32 %t18, i32 %t19)
+  %t21 = mul i32 %t16, %t20
+  ret i32 %t21
+}
 

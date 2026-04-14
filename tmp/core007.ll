@@ -1,15 +1,15 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
-
-[Abstract Syntax]
-(Program [(FnDef [Int] "main" [] [(Block [(Decl [Int] [(Init "x" [(ELitInt 7)])] ), (SExp [(EApp "printInt" [(EVar "x")] )] ), (Ret [(ELitInt 0)] )] )])])
-
-[Linearized Tree]
-int main ()
-{
-  int x = 7;
-  printInt (x);
-  return 0;
+define i32 @main() {
+entry:
+  %t0 = alloca i32
+  store i32 7, i32* %t0
+  %t1 = load i32, i32* %t0
+  call void @printInt(i32 %t1)
+  ret i32 0
 }
-
 

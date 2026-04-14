@@ -1,0 +1,87 @@
+CC = g++
+CXXFLAGS = -g -std=c++17 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function
+
+FLEX = flex
+FLEX_OPTS = -Pjavalette_
+
+BISON = bison
+BISON_OPTS = -t -pjavalette_
+
+SRC_DIR = src
+OBJS = \
+	$(SRC_DIR)/Absyn.o \
+	$(SRC_DIR)/Buffer.o \
+	$(SRC_DIR)/Lexer.o \
+	$(SRC_DIR)/Parser.o \
+	$(SRC_DIR)/Printer.o \
+	$(SRC_DIR)/Skeleton.o \
+	$(SRC_DIR)/TypeChecker.o \
+	$(SRC_DIR)/CodeGenLLVM.o \
+	$(SRC_DIR)/main.o
+
+.PHONY: all clean distclean
+
+all: jlc
+
+jlc: $(SRC_DIR)/jlc
+	cp $(SRC_DIR)/jlc $@
+
+$(SRC_DIR)/jlc: $(OBJS)
+	@echo "Linking $(SRC_DIR)/jlc..."
+	$(CC) $(CXXFLAGS) $(OBJS) -o $@
+
+$(SRC_DIR)/Absyn.o: $(SRC_DIR)/Absyn.C $(SRC_DIR)/Absyn.H
+	$(CC) $(CXXFLAGS) -c $< -o $@
+
+$(SRC_DIR)/Buffer.o: $(SRC_DIR)/Buffer.C $(SRC_DIR)/Buffer.H
+	$(CC) $(CXXFLAGS) -c $< -o $@
+
+$(SRC_DIR)/Lexer.C: $(SRC_DIR)/Javalette.l
+	$(FLEX) $(FLEX_OPTS) -o$@ $<
+
+$(SRC_DIR)/Parser.C $(SRC_DIR)/Bison.H: $(SRC_DIR)/Javalette.y
+	$(BISON) $(BISON_OPTS) $< -o $(SRC_DIR)/Parser.C
+
+$(SRC_DIR)/Lexer.o: $(SRC_DIR)/Lexer.C $(SRC_DIR)/Bison.H
+	$(CC) $(CXXFLAGS) -Wno-sign-conversion -c $< -o $@
+
+$(SRC_DIR)/Parser.o: $(SRC_DIR)/Parser.C $(SRC_DIR)/Absyn.H $(SRC_DIR)/Bison.H
+	$(CC) $(CXXFLAGS) -c $< -o $@
+
+$(SRC_DIR)/Printer.o: $(SRC_DIR)/Printer.C $(SRC_DIR)/Printer.H $(SRC_DIR)/Absyn.H
+	$(CC) $(CXXFLAGS) -c $< -o $@
+
+$(SRC_DIR)/Skeleton.o: $(SRC_DIR)/Skeleton.C $(SRC_DIR)/Skeleton.H $(SRC_DIR)/Absyn.H
+	$(CC) $(CXXFLAGS) -c $< -o $@
+
+$(SRC_DIR)/TypeChecker.o: $(SRC_DIR)/TypeChecker.C $(SRC_DIR)/TypeChecker.H $(SRC_DIR)/Absyn.H
+	$(CC) $(CXXFLAGS) -c $< -o $@
+
+$(SRC_DIR)/CodeGenLLVM.o: $(SRC_DIR)/CodeGenLLVM.cpp $(SRC_DIR)/CodeGenLLVM.H $(SRC_DIR)/Absyn.H
+	$(CC) $(CXXFLAGS) -c $< -o $@
+
+$(SRC_DIR)/main.o: $(SRC_DIR)/main.cpp $(SRC_DIR)/Absyn.H $(SRC_DIR)/Parser.H $(SRC_DIR)/TypeChecker.H $(SRC_DIR)/CodeGenLLVM.H
+	$(CC) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	rm -f jlc $(SRC_DIR)/jlc $(OBJS)
+
+distclean: clean
+	rm -f \
+		$(SRC_DIR)/Absyn.C \
+		$(SRC_DIR)/Absyn.H \
+		$(SRC_DIR)/Buffer.C \
+		$(SRC_DIR)/Buffer.H \
+		$(SRC_DIR)/Test.C \
+		$(SRC_DIR)/Bison.H \
+		$(SRC_DIR)/Parser.C \
+		$(SRC_DIR)/Parser.H \
+		$(SRC_DIR)/ParserError.H \
+		$(SRC_DIR)/Javalette.y \
+		$(SRC_DIR)/Lexer.C \
+		$(SRC_DIR)/Javalette.l \
+		$(SRC_DIR)/Skeleton.C \
+		$(SRC_DIR)/Skeleton.H \
+		$(SRC_DIR)/Printer.C \
+		$(SRC_DIR)/Printer.H \
+		$(SRC_DIR)/Javalette.tex

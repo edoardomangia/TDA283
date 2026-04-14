@@ -1,26 +1,36 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
-
-[Abstract Syntax]
-(Program [(FnDef [Int] "main" [] [(Block [(Decl [Doub] [(NoInit "dA")] ), (Decl [Doub] [(NoInit "dB")] ), (Ass "dA" [(ELitDoub 0.0014)] ), (Ass "dB" [(ELitDoub 0.0004)] ), (Cond [(ERel (EAdd (EVar "dA") [Minus] (EVar "dB")) [EQU] (ELitDoub 0.001))] [(BStmt [(Block [(SExp [(EApp "printInt" [(ELitInt 99)] )] )] )])]), (Decl [Int] [(NoInit "iA")] ), (Decl [Int] [(NoInit "iB")] ), (Ass "iA" [(ELitInt 342)] ), (Ass "iB" [(ELitInt 5123123)] ), (SExp [(EApp "printInt" [(EAdd (EVar "iA") [Minus] (EVar "iB"))] )] ), (Ret [(ELitInt 0)] )] )])])
-
-[Linearized Tree]
-int main ()
-{
-  double dA;
-  double dB;
-  dA = 0.0014;
-  dB = 0.0004;
-  if (dA - dB == 0.001)
-  {
-    printInt (99);
-  }
-  int iA;
-  int iB;
-  iA = 342;
-  iB = 5123123;
-  printInt (iA - iB);
-  return 0;
+define i32 @main() {
+entry:
+  %t0 = alloca double
+  store double 0.0, double* %t0
+  %t1 = alloca double
+  store double 0.0, double* %t1
+  store double 0.001400, double* %t0
+  store double 0.000400, double* %t1
+  %t2 = load double, double* %t0
+  %t3 = load double, double* %t1
+  %t4 = fsub double %t2, %t3
+  %t5 = fcmp oeq double %t4, 0.001000
+  br i1 %t5, label %L0, label %L1
+L0:
+  call void @printInt(i32 99)
+  br label %L1
+L1:
+  %t6 = alloca i32
+  store i32 0, i32* %t6
+  %t7 = alloca i32
+  store i32 0, i32* %t7
+  store i32 342, i32* %t6
+  store i32 5123123, i32* %t7
+  %t8 = load i32, i32* %t6
+  %t9 = load i32, i32* %t7
+  %t10 = sub i32 %t8, %t9
+  call void @printInt(i32 %t10)
+  ret i32 0
 }
-
 

@@ -1,2 +1,0 @@
-error: 2,5: syntax error at [
-ERROR

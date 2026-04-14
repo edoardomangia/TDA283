@@ -1,27 +1,43 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
-
-[Abstract Syntax]
-(Program [(FnDef [Int] "main" [] [(Block [(SExp [(EApp "printInt" [(EApp "fac" [(ELitInt 5)] )] )] ), (Ret [(ELitInt 0)] )] )]), (FnDef [Int] "fac" [(Argument [Int] "a")] [(Block [(Decl [Int] [(NoInit "r")] ), (Decl [Int] [(NoInit "n")] ), (Ass "r" [(ELitInt 1)] ), (Ass "n" [(EVar "a")] ), (While [(ERel (EVar "n") [GTH] (ELitInt 0))] [(BStmt [(Block [(Ass "r" [(EMul (EVar "r") [Times] (EVar "n"))] ), (Ass "n" [(EAdd (EVar "n") [Minus] (ELitInt 1))] )] )])]), (Ret [(EVar "r")] )] )])])
-
-[Linearized Tree]
-int main ()
-{
-  printInt (fac (5));
-  return 0;
-}
-int fac (int a)
-{
-  int r;
-  int n;
-  r = 1;
-  n = a;
-  while (n > 0)
-  {
-    r = r * n;
-    n = n - 1;
-  }
-  return r;
+define i32 @main() {
+entry:
+  %t0 = call i32 @fac(i32 5)
+  call void @printInt(i32 %t0)
+  ret i32 0
 }
 
+define i32 @fac(i32 %__p__a) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__a, i32* %t0
+  %t1 = alloca i32
+  store i32 0, i32* %t1
+  %t2 = alloca i32
+  store i32 0, i32* %t2
+  store i32 1, i32* %t1
+  %t3 = load i32, i32* %t0
+  store i32 %t3, i32* %t2
+  br label %L0
+L0:
+  %t4 = load i32, i32* %t2
+  %t5 = icmp sgt i32 %t4, 0
+  br i1 %t5, label %L1, label %L2
+L1:
+  %t6 = load i32, i32* %t1
+  %t7 = load i32, i32* %t2
+  %t8 = mul i32 %t6, %t7
+  store i32 %t8, i32* %t1
+  %t9 = load i32, i32* %t2
+  %t10 = sub i32 %t9, 1
+  store i32 %t10, i32* %t2
+  br label %L0
+L2:
+  %t11 = load i32, i32* %t1
+  ret i32 %t11
+}
 

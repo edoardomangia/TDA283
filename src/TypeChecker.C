@@ -517,6 +517,16 @@ void TypeChecker::visitEApp(EApp *p)
 {
     std::string name = p->ident_;
 
+    // A local variable shadows a top-level function name.
+    // In that case, this identifier cannot be used for a function call.
+    for (auto it = varStack.rbegin(); it != varStack.rend(); ++it) {
+        if (it->count(name)) {
+            std::ostringstream oss;
+            oss << "'" << name << "' is a variable, not a function";
+            throw TypeError(oss.str());
+        }
+    }
+
     // Special handling for printString: its argument must be a string literal
     if (name == "printString") {
         if (!p->listexpr_ || p->listexpr_->size() != 1) {
@@ -690,4 +700,3 @@ void TypeChecker::visitEAnnotExp(EAnnotExp *p)
     }
     currentExprType = ann;
 }
-

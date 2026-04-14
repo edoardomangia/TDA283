@@ -189,8 +189,11 @@ for f in "$BAD_DIR"/*.jl; do
   stderr=$(mktemp)
 
   # Run jlc with a timeout so we never freeze forever
-  timeout 5 "$JLC" "$f" 1>/dev/null 2>"$stderr"
-  ec=$?
+  if timeout 5 "$JLC" "$f" 1>/dev/null 2>"$stderr"; then
+      ec=0
+    else
+      ec=$?
+  fi
 
   # 124 is the special exit code for timeout
   if [ "$ec" -eq 124 ]; then

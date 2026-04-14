@@ -1,2 +1,0 @@
-ERROR
-Type error: Operator '--' requires operand of type int, but variable 'x' has type boolean

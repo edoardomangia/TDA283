@@ -1,45 +1,104 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
-
-[Abstract Syntax]
-(Program [(FnDef [Int] "main" [] [(Block [(Decl [Int] [(Init "x01" [(ELitInt 1)])] ), (Decl [Int] [(Init "x02" [(ELitInt 2)])] ), (Decl [Int] [(Init "x03" [(ELitInt 3)])] ), (Decl [Int] [(Init "x04" [(ELitInt 4)])] ), (Decl [Int] [(Init "x05" [(ELitInt 5)])] ), (Decl [Int] [(Init "x06" [(ELitInt 6)])] ), (Decl [Int] [(Init "x07" [(ELitInt 7)])] ), (Decl [Int] [(Init "x08" [(ELitInt 8)])] ), (Decl [Int] [(Init "x09" [(ELitInt 9)])] ), (Decl [Int] [(Init "x10" [(ELitInt 10)])] ), (Decl [Int] [(Init "x11" [(ELitInt 11)])] ), (Decl [Int] [(Init "x12" [(ELitInt 12)])] ), (Decl [Int] [(Init "x13" [(ELitInt 13)])] ), (Decl [Int] [(Init "x14" [(ELitInt 14)])] ), (Decl [Int] [(Init "x15" [(ELitInt 15)])] ), (Decl [Int] [(Init "x16" [(EAdd (EAdd (EAdd (EAdd (EAdd (EAdd (EAdd (EAdd (EAdd (EAdd (EAdd (EAdd (EAdd (EAdd (EVar "x01") [Plus] (EVar "x02")) [Plus] (EVar "x03")) [Plus] (EVar "x04")) [Plus] (EVar "x05")) [Plus] (EVar "x06")) [Plus] (EVar "x07")) [Plus] (EVar "x08")) [Plus] (EVar "x09")) [Plus] (EVar "x10")) [Plus] (EVar "x11")) [Plus] (EVar "x12")) [Plus] (EVar "x13")) [Plus] (EVar "x14")) [Plus] (EVar "x15"))])] ), (SExp [(EApp "printInt" [(EVar "x01")] )] ), (SExp [(EApp "printInt" [(EVar "x02")] )] ), (SExp [(EApp "printInt" [(EVar "x03")] )] ), (SExp [(EApp "printInt" [(EVar "x04")] )] ), (SExp [(EApp "printInt" [(EVar "x05")] )] ), (SExp [(EApp "printInt" [(EVar "x06")] )] ), (SExp [(EApp "printInt" [(EVar "x07")] )] ), (SExp [(EApp "printInt" [(EVar "x08")] )] ), (SExp [(EApp "printInt" [(EVar "x09")] )] ), (SExp [(EApp "printInt" [(EVar "x10")] )] ), (SExp [(EApp "printInt" [(EVar "x11")] )] ), (SExp [(EApp "printInt" [(EVar "x12")] )] ), (SExp [(EApp "printInt" [(EVar "x13")] )] ), (SExp [(EApp "printInt" [(EVar "x14")] )] ), (SExp [(EApp "printInt" [(EVar "x15")] )] ), (SExp [(EApp "printInt" [(EVar "x16")] )] ), (Ret [(ELitInt 0)] )] )])])
-
-[Linearized Tree]
-int main ()
-{
-  int x01 = 1;
-  int x02 = 2;
-  int x03 = 3;
-  int x04 = 4;
-  int x05 = 5;
-  int x06 = 6;
-  int x07 = 7;
-  int x08 = 8;
-  int x09 = 9;
-  int x10 = 10;
-  int x11 = 11;
-  int x12 = 12;
-  int x13 = 13;
-  int x14 = 14;
-  int x15 = 15;
-  int x16 = x01 + x02 + x03 + x04 + x05 + x06 + x07 + x08 + x09 + x10 + x11 + x12 + x13 + x14 + x15;
-  printInt (x01);
-  printInt (x02);
-  printInt (x03);
-  printInt (x04);
-  printInt (x05);
-  printInt (x06);
-  printInt (x07);
-  printInt (x08);
-  printInt (x09);
-  printInt (x10);
-  printInt (x11);
-  printInt (x12);
-  printInt (x13);
-  printInt (x14);
-  printInt (x15);
-  printInt (x16);
-  return 0;
+define i32 @main() {
+entry:
+  %t0 = alloca i32
+  store i32 1, i32* %t0
+  %t1 = alloca i32
+  store i32 2, i32* %t1
+  %t2 = alloca i32
+  store i32 3, i32* %t2
+  %t3 = alloca i32
+  store i32 4, i32* %t3
+  %t4 = alloca i32
+  store i32 5, i32* %t4
+  %t5 = alloca i32
+  store i32 6, i32* %t5
+  %t6 = alloca i32
+  store i32 7, i32* %t6
+  %t7 = alloca i32
+  store i32 8, i32* %t7
+  %t8 = alloca i32
+  store i32 9, i32* %t8
+  %t9 = alloca i32
+  store i32 10, i32* %t9
+  %t10 = alloca i32
+  store i32 11, i32* %t10
+  %t11 = alloca i32
+  store i32 12, i32* %t11
+  %t12 = alloca i32
+  store i32 13, i32* %t12
+  %t13 = alloca i32
+  store i32 14, i32* %t13
+  %t14 = alloca i32
+  store i32 15, i32* %t14
+  %t15 = alloca i32
+  %t16 = load i32, i32* %t0
+  %t17 = load i32, i32* %t1
+  %t18 = add i32 %t16, %t17
+  %t19 = load i32, i32* %t2
+  %t20 = add i32 %t18, %t19
+  %t21 = load i32, i32* %t3
+  %t22 = add i32 %t20, %t21
+  %t23 = load i32, i32* %t4
+  %t24 = add i32 %t22, %t23
+  %t25 = load i32, i32* %t5
+  %t26 = add i32 %t24, %t25
+  %t27 = load i32, i32* %t6
+  %t28 = add i32 %t26, %t27
+  %t29 = load i32, i32* %t7
+  %t30 = add i32 %t28, %t29
+  %t31 = load i32, i32* %t8
+  %t32 = add i32 %t30, %t31
+  %t33 = load i32, i32* %t9
+  %t34 = add i32 %t32, %t33
+  %t35 = load i32, i32* %t10
+  %t36 = add i32 %t34, %t35
+  %t37 = load i32, i32* %t11
+  %t38 = add i32 %t36, %t37
+  %t39 = load i32, i32* %t12
+  %t40 = add i32 %t38, %t39
+  %t41 = load i32, i32* %t13
+  %t42 = add i32 %t40, %t41
+  %t43 = load i32, i32* %t14
+  %t44 = add i32 %t42, %t43
+  store i32 %t44, i32* %t15
+  %t45 = load i32, i32* %t0
+  call void @printInt(i32 %t45)
+  %t46 = load i32, i32* %t1
+  call void @printInt(i32 %t46)
+  %t47 = load i32, i32* %t2
+  call void @printInt(i32 %t47)
+  %t48 = load i32, i32* %t3
+  call void @printInt(i32 %t48)
+  %t49 = load i32, i32* %t4
+  call void @printInt(i32 %t49)
+  %t50 = load i32, i32* %t5
+  call void @printInt(i32 %t50)
+  %t51 = load i32, i32* %t6
+  call void @printInt(i32 %t51)
+  %t52 = load i32, i32* %t7
+  call void @printInt(i32 %t52)
+  %t53 = load i32, i32* %t8
+  call void @printInt(i32 %t53)
+  %t54 = load i32, i32* %t9
+  call void @printInt(i32 %t54)
+  %t55 = load i32, i32* %t10
+  call void @printInt(i32 %t55)
+  %t56 = load i32, i32* %t11
+  call void @printInt(i32 %t56)
+  %t57 = load i32, i32* %t12
+  call void @printInt(i32 %t57)
+  %t58 = load i32, i32* %t13
+  call void @printInt(i32 %t58)
+  %t59 = load i32, i32* %t14
+  call void @printInt(i32 %t59)
+  %t60 = load i32, i32* %t15
+  call void @printInt(i32 %t60)
+  ret i32 0
 }
-
 

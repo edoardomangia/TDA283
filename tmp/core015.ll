@@ -1,20 +1,35 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
-
-[Abstract Syntax]
-(Program [(FnDef [Int] "main" [] [(Block [(SExp [(EApp "printInt" [(EApp "ev" [(ELitInt 17)] )] )] ), (Ret [(ELitInt 0)] )] )]), (FnDef [Int] "ev" [(Argument [Int] "y")] [(Block [(CondElse [(ERel (EVar "y") [GTH] (ELitInt 0))] (Ret [(EApp "ev" [(EAdd (EVar "y") [Minus] (ELitInt 2))] )] ) (CondElse [(ERel (EVar "y") [LTH] (ELitInt 0))] (Ret [(ELitInt 0)] ) (Ret [(ELitInt 1)] )))] )])])
-
-[Linearized Tree]
-int main ()
-{
-  printInt (ev (17));
-  return 0;
-}
-int ev (int y)
-{
-  if (y > 0) return ev (y - 2);
-  else if (y < 0) return 0;
-  else return 1;
+define i32 @main() {
+entry:
+  %t0 = call i32 @ev(i32 17)
+  call void @printInt(i32 %t0)
+  ret i32 0
 }
 
+define i32 @ev(i32 %__p__y) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__y, i32* %t0
+  %t1 = load i32, i32* %t0
+  %t2 = icmp sgt i32 %t1, 0
+  br i1 %t2, label %L0, label %L1
+L0:
+  %t3 = load i32, i32* %t0
+  %t4 = sub i32 %t3, 2
+  %t5 = call i32 @ev(i32 %t4)
+  ret i32 %t5
+L1:
+  %t6 = load i32, i32* %t0
+  %t7 = icmp slt i32 %t6, 0
+  br i1 %t7, label %L3, label %L4
+L3:
+  ret i32 0
+L4:
+  ret i32 1
+}
 

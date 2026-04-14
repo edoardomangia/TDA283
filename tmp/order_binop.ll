@@ -1,25 +1,47 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
-
-[Abstract Syntax]
-(Program [(FnDef [Int] "main" [] [(Block [(Decl [Int] [(NoInit "x")] ), (Ass "x" [(EAdd (EApp "f" [(ELitInt 1)] ) [Minus] (EApp "f" [(ELitInt 2)] ))] ), (Ass "x" [(EAdd (EApp "f" [(ELitInt 3)] ) [Plus] (EApp "f" [(ELitInt 4)] ))] ), (Ass "x" [(EMul (EApp "f" [(ELitInt 5)] ) [Times] (EApp "f" [(ELitInt 6)] ))] ), (Ass "x" [(EMul (EApp "f" [(ELitInt 7)] ) [Div] (EApp "f" [(ELitInt 8)] ))] ), (Ass "x" [(EMul (EApp "f" [(ELitInt 9)] ) [Mod] (EApp "f" [(ELitInt 2)] ))] ), (SExp [(EApp "printInt" [(EAdd (EApp "f" [(ELitInt 12)] ) [Plus] (EApp "f" [(ELitInt 34)] ))] )] ), (Ret [(ELitInt 0)] )] )]), (FnDef [Int] "f" [(Argument [Int] "x")] [(Block [(SExp [(EApp "printInt" [(EVar "x")] )] ), (Ret [(EVar "x")] )] )])])
-
-[Linearized Tree]
-int main ()
-{
-  int x;
-  x = f (1) - f (2);
-  x = f (3) + f (4);
-  x = f (5) * f (6);
-  x = f (7) / f (8);
-  x = f (9) % f (2);
-  printInt (f (12) + f (34));
-  return 0;
+define i32 @main() {
+entry:
+  %t0 = alloca i32
+  store i32 0, i32* %t0
+  %t1 = call i32 @f(i32 1)
+  %t2 = call i32 @f(i32 2)
+  %t3 = sub i32 %t1, %t2
+  store i32 %t3, i32* %t0
+  %t4 = call i32 @f(i32 3)
+  %t5 = call i32 @f(i32 4)
+  %t6 = add i32 %t4, %t5
+  store i32 %t6, i32* %t0
+  %t7 = call i32 @f(i32 5)
+  %t8 = call i32 @f(i32 6)
+  %t9 = mul i32 %t7, %t8
+  store i32 %t9, i32* %t0
+  %t10 = call i32 @f(i32 7)
+  %t11 = call i32 @f(i32 8)
+  %t12 = sdiv i32 %t10, %t11
+  store i32 %t12, i32* %t0
+  %t13 = call i32 @f(i32 9)
+  %t14 = call i32 @f(i32 2)
+  %t15 = srem i32 %t13, %t14
+  store i32 %t15, i32* %t0
+  %t16 = call i32 @f(i32 12)
+  %t17 = call i32 @f(i32 34)
+  %t18 = add i32 %t16, %t17
+  call void @printInt(i32 %t18)
+  ret i32 0
 }
-int f (int x)
-{
-  printInt (x);
-  return x;
-}
 
+define i32 @f(i32 %__p__x) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__x, i32* %t0
+  %t1 = load i32, i32* %t0
+  call void @printInt(i32 %t1)
+  %t2 = load i32, i32* %t0
+  ret i32 %t2
+}
 

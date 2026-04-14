@@ -1,2 +1,0 @@
-ERROR
-Type error: Type mismatch in argument 1 of call to 'printDouble': expected double, got int

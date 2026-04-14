@@ -1,2 +1,0 @@
-error: 2,8: syntax error at -
-ERROR

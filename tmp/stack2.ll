@@ -1,30 +1,40 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
-
-[Abstract Syntax]
-(Program [(FnDef [Void] "foo" [] [(Block [(Decl [Int] [(Init "x1" [(ELitInt 55555)])] ), (Decl [Int] [(Init "x2" [(ELitInt 66666)])] ), (Decl [Int] [(Init "x3" [(ELitInt 77777)])] ), (Decl [Int] [(Init "x4" [(ELitInt 88888)])] ), (Decl [Int] [(Init "x5" [(ELitInt 99999)])] ), (Decl [Int] [(Init "x6" [(ELitInt 11111)])] ), (Decl [Int] [(Init "x7" [(ELitInt 22222)])] ), (Decl [Int] [(Init "x8" [(ELitInt 33333)])] )] )]), (FnDef [Int] "main" [] [(Block [(SExp [(EApp "foo" [] )] ), (Decl [Int] [(NoInit "x")] ), (BStmt [(Block [(Decl [Int] [(Init "x" [(EVar "x")])] ), (SExp [(EApp "printInt" [(EVar "x")] )] ), (Ret [(ELitInt 0)] )] )])] )])])
-
-[Linearized Tree]
-void foo ()
-{
-  int x1 = 55555;
-  int x2 = 66666;
-  int x3 = 77777;
-  int x4 = 88888;
-  int x5 = 99999;
-  int x6 = 11111;
-  int x7 = 22222;
-  int x8 = 33333;
-}
-int main ()
-{
-  foo ();
-  int x;
-  {
-    int x = x;
-    printInt (x);
-    return 0;
-  }
+define void @foo() {
+entry:
+  %t0 = alloca i32
+  store i32 55555, i32* %t0
+  %t1 = alloca i32
+  store i32 66666, i32* %t1
+  %t2 = alloca i32
+  store i32 77777, i32* %t2
+  %t3 = alloca i32
+  store i32 88888, i32* %t3
+  %t4 = alloca i32
+  store i32 99999, i32* %t4
+  %t5 = alloca i32
+  store i32 11111, i32* %t5
+  %t6 = alloca i32
+  store i32 22222, i32* %t6
+  %t7 = alloca i32
+  store i32 33333, i32* %t7
+  ret void
 }
 
+define i32 @main() {
+entry:
+  call void @foo()
+  %t0 = alloca i32
+  store i32 0, i32* %t0
+  %t1 = alloca i32
+  %t2 = load i32, i32* %t0
+  store i32 %t2, i32* %t1
+  %t3 = load i32, i32* %t1
+  call void @printInt(i32 %t3)
+  ret i32 0
+}
 

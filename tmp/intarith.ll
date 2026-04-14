@@ -1,21 +1,29 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
-
-[Abstract Syntax]
-(Program [(FnDef [Int] "main" [] [(Block [(Decl [Int] [(NoInit "x")] ), (Ass "x" [(ELitInt 5)] ), (While [(ERel (EVar "x") [GTH] (ELitInt 0))] [(BStmt [(Block [(SExp [(EApp "printInt" [(EVar "x")] )] ), (Decr "x" )] )])]), (SExp [(EApp "printInt" [(EVar "x")] )] ), (Ret [(ELitInt 0)] )] )])])
-
-[Linearized Tree]
-int main ()
-{
-  int x;
-  x = 5;
-  while (x > 0)
-  {
-    printInt (x);
-    x --;
-  }
-  printInt (x);
-  return 0;
+define i32 @main() {
+entry:
+  %t0 = alloca i32
+  store i32 0, i32* %t0
+  store i32 5, i32* %t0
+  br label %L0
+L0:
+  %t1 = load i32, i32* %t0
+  %t2 = icmp sgt i32 %t1, 0
+  br i1 %t2, label %L1, label %L2
+L1:
+  %t3 = load i32, i32* %t0
+  call void @printInt(i32 %t3)
+  %t4 = load i32, i32* %t0
+  %t5 = sub i32 %t4, 1
+  store i32 %t5, i32* %t0
+  br label %L0
+L2:
+  %t6 = load i32, i32* %t0
+  call void @printInt(i32 %t6)
+  ret i32 0
 }
-
 

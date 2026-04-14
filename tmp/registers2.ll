@@ -1,29 +1,149 @@
+declare void @printInt(i32)
+declare void @printDouble(double)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare double @readDouble()
 
-Parse Successful!
-
-[Abstract Syntax]
-(Program [(FnDef [Int] "main" [] [(Block [(SExp [(EApp "many_params" [(ELitInt 1), (ELitInt 2), (ELitInt 3), (ELitInt 4), (ELitDoub 100), (ELitDoub 100), (ELitDoub 100), (ELitDoub 100), (ELitDoub 200), (ELitDoub 200), (ELitDoub 200), (ELitDoub 200), (ELitDoub 300), (ELitDoub 300), (ELitDoub 300), (ELitDoub 300), (ELitDoub 400), (ELitDoub 400), (ELitDoub 400), (ELitDoub 400), (ELitInt 5), (ELitInt 6), (ELitInt 7), (ELitInt 8), (ELitInt 9), (ELitInt 10), (ELitInt 11), (ELitInt 12), (ELitInt 13), (ELitInt 14), (ELitInt 15)] )] ), (Ret [(ELitInt 0)] )] )]), (FnDef [Void] "many_params" [(Argument [Int] "x1"), (Argument [Int] "x2"), (Argument [Int] "x3"), (Argument [Int] "x4"), (Argument [Doub] "d01"), (Argument [Doub] "d02"), (Argument [Doub] "d03"), (Argument [Doub] "d04"), (Argument [Doub] "d11"), (Argument [Doub] "d12"), (Argument [Doub] "d13"), (Argument [Doub] "d14"), (Argument [Doub] "d21"), (Argument [Doub] "d22"), (Argument [Doub] "d23"), (Argument [Doub] "d24"), (Argument [Doub] "d31"), (Argument [Doub] "d32"), (Argument [Doub] "d33"), (Argument [Doub] "d34"), (Argument [Int] "y1"), (Argument [Int] "y2"), (Argument [Int] "y3"), (Argument [Int] "y4"), (Argument [Int] "z1"), (Argument [Int] "z2"), (Argument [Int] "z3"), (Argument [Int] "z4"), (Argument [Int] "q1"), (Argument [Int] "q2"), (Argument [Int] "q3")] [(Block [(SExp [(EApp "printInt" [(EVar "x1")] )] ), (SExp [(EApp "printInt" [(EVar "y1")] )] ), (SExp [(EApp "printInt" [(EVar "z1")] )] ), (SExp [(EApp "printInt" [(EVar "q1")] )] ), (SExp [(EApp "printDouble" [(EVar "d01")] )] ), (SExp [(EApp "printDouble" [(EVar "d11")] )] ), (SExp [(EApp "printDouble" [(EVar "d21")] )] ), (SExp [(EApp "printDouble" [(EVar "d31")] )] ), (Cond [(ERel (EVar "x1") [NE] (ELitInt 2))] [(BStmt [(Block [(SExp [(EApp "many_params" [(EVar "q3"), (EVar "x1"), (EVar "x2"), (EVar "x3"), (EMul (EVar "d04") [Div] (ELitDoub 2)), (EMul (EVar "d01") [Times] (ELitDoub 2)), (EAdd (EVar "d02") [Plus] (ELitDoub 1)), (EAdd (EVar "d03") [Minus] (ELitDoub 0)), (EMul (EVar "d14") [Div] (ELitDoub 2)), (EMul (EVar "d11") [Times] (ELitDoub 2)), (EAdd (EVar "d12") [Plus] (ELitDoub 1)), (EAdd (EVar "d13") [Minus] (ELitDoub 0)), (EMul (EVar "d24") [Div] (ELitDoub 2)), (EMul (EVar "d21") [Times] (ELitDoub 2)), (EAdd (EVar "d22") [Plus] (ELitDoub 1)), (EAdd (EVar "d23") [Minus] (ELitDoub 0)), (EMul (EVar "d34") [Div] (ELitDoub 2)), (EMul (EVar "d31") [Times] (ELitDoub 2)), (EAdd (EVar "d32") [Plus] (ELitDoub 1)), (EAdd (EVar "d33") [Minus] (ELitDoub 0)), (EVar "x4"), (EVar "y1"), (EVar "y2"), (EVar "y3"), (EVar "y4"), (EVar "z1"), (EVar "z2"), (EVar "z3"), (EVar "z4"), (EVar "q1"), (EVar "q2")] )] )] )])])] )])])
-
-[Linearized Tree]
-int main ()
-{
-  many_params (1, 2, 3, 4, 100, 100, 100, 100, 200, 200, 200, 200, 300, 300, 300, 300, 400, 400, 400, 400, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-  return 0;
-}
-void many_params (int x1, int x2, int x3, int x4, double d01, double d02, double d03, double d04, double d11, double d12, double d13, double d14, double d21, double d22, double d23, double d24, double d31, double d32, double d33, double d34, int y1, int y2, int y3, int y4, int z1, int z2, int z3, int z4, int q1, int q2, int q3)
-{
-  printInt (x1);
-  printInt (y1);
-  printInt (z1);
-  printInt (q1);
-  printDouble (d01);
-  printDouble (d11);
-  printDouble (d21);
-  printDouble (d31);
-  if (x1 != 2)
-  {
-    many_params (q3, x1, x2, x3, d04 / 2, d01 * 2, d02 + 1, d03 - 0, d14 / 2, d11 * 2, d12 + 1, d13 - 0, d24 / 2, d21 * 2, d22 + 1, d23 - 0, d34 / 2, d31 * 2, d32 + 1, d33 - 0, x4, y1, y2, y3, y4, z1, z2, z3, z4, q1, q2);
-  }
+define i32 @main() {
+entry:
+  call void @many_params(i32 1, i32 2, i32 3, i32 4, double 100.000000, double 100.000000, double 100.000000, double 100.000000, double 200.000000, double 200.000000, double 200.000000, double 200.000000, double 300.000000, double 300.000000, double 300.000000, double 300.000000, double 400.000000, double 400.000000, double 400.000000, double 400.000000, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15)
+  ret i32 0
 }
 
+define void @many_params(i32 %__p__x1, i32 %__p__x2, i32 %__p__x3, i32 %__p__x4, double %__p__d01, double %__p__d02, double %__p__d03, double %__p__d04, double %__p__d11, double %__p__d12, double %__p__d13, double %__p__d14, double %__p__d21, double %__p__d22, double %__p__d23, double %__p__d24, double %__p__d31, double %__p__d32, double %__p__d33, double %__p__d34, i32 %__p__y1, i32 %__p__y2, i32 %__p__y3, i32 %__p__y4, i32 %__p__z1, i32 %__p__z2, i32 %__p__z3, i32 %__p__z4, i32 %__p__q1, i32 %__p__q2, i32 %__p__q3) {
+entry:
+  %t0 = alloca i32
+  store i32 %__p__x1, i32* %t0
+  %t1 = alloca i32
+  store i32 %__p__x2, i32* %t1
+  %t2 = alloca i32
+  store i32 %__p__x3, i32* %t2
+  %t3 = alloca i32
+  store i32 %__p__x4, i32* %t3
+  %t4 = alloca double
+  store double %__p__d01, double* %t4
+  %t5 = alloca double
+  store double %__p__d02, double* %t5
+  %t6 = alloca double
+  store double %__p__d03, double* %t6
+  %t7 = alloca double
+  store double %__p__d04, double* %t7
+  %t8 = alloca double
+  store double %__p__d11, double* %t8
+  %t9 = alloca double
+  store double %__p__d12, double* %t9
+  %t10 = alloca double
+  store double %__p__d13, double* %t10
+  %t11 = alloca double
+  store double %__p__d14, double* %t11
+  %t12 = alloca double
+  store double %__p__d21, double* %t12
+  %t13 = alloca double
+  store double %__p__d22, double* %t13
+  %t14 = alloca double
+  store double %__p__d23, double* %t14
+  %t15 = alloca double
+  store double %__p__d24, double* %t15
+  %t16 = alloca double
+  store double %__p__d31, double* %t16
+  %t17 = alloca double
+  store double %__p__d32, double* %t17
+  %t18 = alloca double
+  store double %__p__d33, double* %t18
+  %t19 = alloca double
+  store double %__p__d34, double* %t19
+  %t20 = alloca i32
+  store i32 %__p__y1, i32* %t20
+  %t21 = alloca i32
+  store i32 %__p__y2, i32* %t21
+  %t22 = alloca i32
+  store i32 %__p__y3, i32* %t22
+  %t23 = alloca i32
+  store i32 %__p__y4, i32* %t23
+  %t24 = alloca i32
+  store i32 %__p__z1, i32* %t24
+  %t25 = alloca i32
+  store i32 %__p__z2, i32* %t25
+  %t26 = alloca i32
+  store i32 %__p__z3, i32* %t26
+  %t27 = alloca i32
+  store i32 %__p__z4, i32* %t27
+  %t28 = alloca i32
+  store i32 %__p__q1, i32* %t28
+  %t29 = alloca i32
+  store i32 %__p__q2, i32* %t29
+  %t30 = alloca i32
+  store i32 %__p__q3, i32* %t30
+  %t31 = load i32, i32* %t0
+  call void @printInt(i32 %t31)
+  %t32 = load i32, i32* %t20
+  call void @printInt(i32 %t32)
+  %t33 = load i32, i32* %t24
+  call void @printInt(i32 %t33)
+  %t34 = load i32, i32* %t28
+  call void @printInt(i32 %t34)
+  %t35 = load double, double* %t4
+  call void @printDouble(double %t35)
+  %t36 = load double, double* %t8
+  call void @printDouble(double %t36)
+  %t37 = load double, double* %t12
+  call void @printDouble(double %t37)
+  %t38 = load double, double* %t16
+  call void @printDouble(double %t38)
+  %t39 = load i32, i32* %t0
+  %t40 = icmp ne i32 %t39, 2
+  br i1 %t40, label %L0, label %L1
+L0:
+  %t41 = load i32, i32* %t30
+  %t42 = load i32, i32* %t0
+  %t43 = load i32, i32* %t1
+  %t44 = load i32, i32* %t2
+  %t45 = load double, double* %t7
+  %t46 = fdiv double %t45, 2.000000
+  %t47 = load double, double* %t4
+  %t48 = fmul double %t47, 2.000000
+  %t49 = load double, double* %t5
+  %t50 = fadd double %t49, 1.000000
+  %t51 = load double, double* %t6
+  %t52 = fsub double %t51, 0.000000
+  %t53 = load double, double* %t11
+  %t54 = fdiv double %t53, 2.000000
+  %t55 = load double, double* %t8
+  %t56 = fmul double %t55, 2.000000
+  %t57 = load double, double* %t9
+  %t58 = fadd double %t57, 1.000000
+  %t59 = load double, double* %t10
+  %t60 = fsub double %t59, 0.000000
+  %t61 = load double, double* %t15
+  %t62 = fdiv double %t61, 2.000000
+  %t63 = load double, double* %t12
+  %t64 = fmul double %t63, 2.000000
+  %t65 = load double, double* %t13
+  %t66 = fadd double %t65, 1.000000
+  %t67 = load double, double* %t14
+  %t68 = fsub double %t67, 0.000000
+  %t69 = load double, double* %t19
+  %t70 = fdiv double %t69, 2.000000
+  %t71 = load double, double* %t16
+  %t72 = fmul double %t71, 2.000000
+  %t73 = load double, double* %t17
+  %t74 = fadd double %t73, 1.000000
+  %t75 = load double, double* %t18
+  %t76 = fsub double %t75, 0.000000
+  %t77 = load i32, i32* %t3
+  %t78 = load i32, i32* %t20
+  %t79 = load i32, i32* %t21
+  %t80 = load i32, i32* %t22
+  %t81 = load i32, i32* %t23
+  %t82 = load i32, i32* %t24
+  %t83 = load i32, i32* %t25
+  %t84 = load i32, i32* %t26
+  %t85 = load i32, i32* %t27
+  %t86 = load i32, i32* %t28
+  %t87 = load i32, i32* %t29
+  call void @many_params(i32 %t41, i32 %t42, i32 %t43, i32 %t44, double %t46, double %t48, double %t50, double %t52, double %t54, double %t56, double %t58, double %t60, double %t62, double %t64, double %t66, double %t68, double %t70, double %t72, double %t74, double %t76, i32 %t77, i32 %t78, i32 %t79, i32 %t80, i32 %t81, i32 %t82, i32 %t83, i32 %t84, i32 %t85, i32 %t86, i32 %t87)
+  br label %L1
+L1:
+  ret void
+}
 
