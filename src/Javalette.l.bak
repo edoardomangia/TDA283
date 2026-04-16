@@ -103,6 +103,7 @@ IDENT [a-zA-Z0-9'_]
 <INITIAL>"for"      	 return _KW_for;
 <INITIAL>"if"      	 return _KW_if;
 <INITIAL>"int"      	 return _KW_int;
+<INITIAL>"length"      	 return _KW_length;
 <INITIAL>"new"      	 return _KW_new;
 <INITIAL>"return"      	 return _KW_return;
 <INITIAL>"true"      	 return _KW_true;

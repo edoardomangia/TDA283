@@ -12,6 +12,10 @@ Argument.  Arg ::= Type Ident;
 
 separator  Arg "," ;
 
+LhsVar.    Lhs ::= Ident ;
+
+LhsIndex.  Lhs ::= Expr6 "[" Expr "]" ;
+
 -- statements ----------------------------------------------
 
 Block.     Blk ::= "{" [Stmt] "}" ;
@@ -30,11 +34,11 @@ Init.      Item ::= Ident "=" Expr ;
 
 separator nonempty Item "," ;
 
-Ass.       Stmt ::= Ident "=" Expr  ";" ;
+Ass.       Stmt ::= Lhs "=" Expr  ";" ;
 
-Incr.      Stmt ::= Ident "++"  ";" ;
+Incr.      Stmt ::= Lhs "++"  ";" ;
 
-Decr.      Stmt ::= Ident "--"  ";" ;
+Decr.      Stmt ::= Lhs "--"  ";" ;
 
 Ret.       Stmt ::= "return" Expr ";" ;
 
@@ -45,6 +49,8 @@ Cond.      Stmt ::= "if" "(" Expr ")" Stmt  ;
 CondElse.  Stmt ::= "if" "(" Expr ")" Stmt "else" Stmt  ;
 
 While.     Stmt ::= "while" "(" Expr ")" Stmt ;
+
+ForEach.   Stmt ::= "for" "(" Type Ident ":" Expr ")" Stmt ;
 
 SExp.      Stmt ::= Expr  ";" ;
 
@@ -57,6 +63,14 @@ Doub.      Type ::= "double" ;
 Bool.      Type ::= "boolean" ;
 
 Void.      Type ::= "void" ;
+
+Arr.       Type ::= Type "[" "]" ;
+
+IntBase.   BaseType ::= "int" ;
+
+DoubBase.  BaseType ::= "double" ;
+
+BoolBase.  BaseType ::= "boolean" ;
 
 internal   Fun. Type ::= Type "(" [Type] ")" ;
 
@@ -77,6 +91,16 @@ ELitFalse. Expr6 ::= "false" ;
 EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
 
 EString.   Expr6 ::= String ;
+
+NewDim.    ArrSize ::= "[" Expr "]" ;
+
+separator nonempty ArrSize "" ;
+
+ENew.      Expr6 ::= "new" BaseType [ArrSize] ;
+
+EIndex.    Expr6 ::= Expr6 "[" Expr "]" ;
+
+ELength.   Expr6 ::= Expr6 "." Ident ;
 
 Neg.       Expr5 ::= "-" Expr6 ;
 

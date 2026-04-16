@@ -18,9 +18,7 @@ public:
   void visitStmt(Stmt *p);
   void visitItem(Item *p);
   void visitType(Type *p);
-  void visitBaseType(BaseType *p);
   void visitExpr(Expr *p);
-  void visitArrSize(ArrSize *p);
   void visitAddOp(AddOp *p);
   void visitMulOp(MulOp *p);
   void visitRelOp(RelOp *p);
@@ -50,9 +48,6 @@ public:
   void visitBool(Bool *p);
   void visitVoid(Void *p);
   void visitArr(Arr *p);
-  void visitIntBase(IntBase *p);
-  void visitDoubBase(DoubBase *p);
-  void visitBoolBase(BoolBase *p);
   void visitFun(Fun *p);
   void visitEVar(EVar *p);
   void visitELitInt(ELitInt *p);
@@ -61,7 +56,6 @@ public:
   void visitELitFalse(ELitFalse *p);
   void visitEApp(EApp *p);
   void visitEString(EString *p);
-  void visitNewDim(NewDim *p);
   void visitENew(ENew *p);
   void visitEIndex(EIndex *p);
   void visitELength(ELength *p);
@@ -89,7 +83,6 @@ public:
   void visitListStmt(ListStmt *p);
   void visitListItem(ListItem *p);
   void visitListType(ListType *p);
-  void visitListArrSize(ListArrSize *p);
   void visitListExpr(ListExpr *p);
 
   void visitInteger(Integer x);

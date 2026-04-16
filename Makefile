@@ -7,6 +7,8 @@ FLEX_OPTS = -Pjavalette_
 BISON = bison
 BISON_OPTS = -t -pjavalette_
 
+BNFC = ./src/bnfc
+
 SRC_DIR = src
 OBJS = \
 	$(SRC_DIR)/Absyn.o \
@@ -30,6 +32,9 @@ $(SRC_DIR)/jlc: $(OBJS)
 	@echo "Linking $(SRC_DIR)/jlc..."
 	$(CC) $(CXXFLAGS) $(OBJS) -o $@
 
+$(SRC_DIR)/Absyn.C $(SRC_DIR)/Absyn.H $(SRC_DIR)/Buffer.C $(SRC_DIR)/Buffer.H $(SRC_DIR)/Parser.H $(SRC_DIR)/ParserError.H $(SRC_DIR)/Printer.C $(SRC_DIR)/Printer.H $(SRC_DIR)/Skeleton.C $(SRC_DIR)/Skeleton.H $(SRC_DIR)/Test.C $(SRC_DIR)/Javalette.y $(SRC_DIR)/Javalette.l: $(SRC_DIR)/Javalette.cf
+	$(BNFC) --cpp -o $(SRC_DIR) $<
+
 $(SRC_DIR)/Absyn.o: $(SRC_DIR)/Absyn.C $(SRC_DIR)/Absyn.H
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
@@ -41,6 +46,7 @@ $(SRC_DIR)/Lexer.C: $(SRC_DIR)/Javalette.l
 
 $(SRC_DIR)/Parser.C $(SRC_DIR)/Bison.H: $(SRC_DIR)/Javalette.y
 	$(BISON) $(BISON_OPTS) $< -o $(SRC_DIR)/Parser.C
+	cp Bison.H $(SRC_DIR)/Bison.H
 
 $(SRC_DIR)/Lexer.o: $(SRC_DIR)/Lexer.C $(SRC_DIR)/Bison.H
 	$(CC) $(CXXFLAGS) -Wno-sign-conversion -c $< -o $@

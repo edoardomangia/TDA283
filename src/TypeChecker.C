@@ -5,698 +5,629 @@
 #include <set>
 #include <sstream>
 
-// ---------- Small helpers in an anonymous namespace ----------
-
 namespace {
 
-std::string typeToString(TypeKind t) {
-    switch (t) {
-        case TypeKind::INT:    return "int";
-        case TypeKind::DOUBLE: return "double";
-        case TypeKind::BOOL:   return "boolean";
-        case TypeKind::VOID:   return "void";
-    }
-    return "<unknown-type>";
+std::string typeToString(const SemType &t) {
+  std::string base;
+  switch (t.base) {
+  case PrimType::INT:
+    base = "int";
+    break;
+  case PrimType::DOUBLE:
+    base = "double";
+    break;
+  case PrimType::BOOL:
+    base = "boolean";
+    break;
+  case PrimType::VOID:
+    base = "void";
+    break;
+  }
+  for (int i = 0; i < t.arrayDepth; ++i) {
+    base += "[]";
+  }
+  return base;
 }
 
-// Forward decls for definite-return analysis
+bool isNumericScalar(const SemType &t) {
+  return t.arrayDepth == 0 &&
+         (t.base == PrimType::INT || t.base == PrimType::DOUBLE);
+}
+
+bool isIntScalar(const SemType &t) {
+  return t.arrayDepth == 0 && t.base == PrimType::INT;
+}
+
+bool isBoolScalar(const SemType &t) {
+  return t.arrayDepth == 0 && t.base == PrimType::BOOL;
+}
+
+SemType elementType(const SemType &t) {
+  return {t.base, t.arrayDepth - 1};
+}
+
 bool stmtReturns(Stmt *s);
 bool blockReturns(Blk *b);
 
 bool blockReturns(Blk *b) {
-    if (!b) return false;
-    Block *block = dynamic_cast<Block*>(b);
-    if (!block || !block->liststmt_) return false;
-
-    for (Stmt *s : *block->liststmt_) {
-        if (stmtReturns(s)) return true;
-    }
+  auto *block = dynamic_cast<Block *>(b);
+  if (!block || !block->liststmt_) {
     return false;
+  }
+  for (Stmt *s : *block->liststmt_) {
+    if (stmtReturns(s)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool stmtReturns(Stmt *s) {
-    if (!s) return false;
-
-    if (dynamic_cast<Ret*>(s))  return true;
-    if (dynamic_cast<VRet*>(s)) return true;
-
-    if (auto bs = dynamic_cast<BStmt*>(s)) {
-        return blockReturns(bs->blk_);
-    }
-
-    if (auto ce = dynamic_cast<CondElse*>(s)) {
-        // if (e) s1 else s2  returns iff both branches return
-        return stmtReturns(ce->stmt_1) && stmtReturns(ce->stmt_2);
-    }
-
-    // while, if-without-else, decls, ass, incr, decr, sexp, empty, ...
+  if (!s) {
     return false;
+  }
+  if (dynamic_cast<Ret *>(s) || dynamic_cast<VRet *>(s)) {
+    return true;
+  }
+  if (auto *bs = dynamic_cast<BStmt *>(s)) {
+    return blockReturns(bs->blk_);
+  }
+  if (auto *ce = dynamic_cast<CondElse *>(s)) {
+    return stmtReturns(ce->stmt_1) && stmtReturns(ce->stmt_2);
+  }
+  return false;
 }
 
-} // anonymous namespace
+} // namespace
 
-// ---------- TypeChecker core API ----------
+void TypeChecker::checkProgram(Prog *p) {
+  funEnv.clear();
+  varStack.clear();
+  currentExprType = {PrimType::VOID, 0};
+  currentFunResult = {PrimType::VOID, 0};
 
-// Entry point for type checking: resets environments and prepares to analyze program.
-void TypeChecker::checkProgram(Prog *p)
-{
-    funEnv.clear();
-    varStack.clear();
+  funEnv["printInt"] = {{PrimType::VOID, 0}, {{PrimType::INT, 0}}};
+  funEnv["printDouble"] = {{PrimType::VOID, 0}, {{PrimType::DOUBLE, 0}}};
+  funEnv["readInt"] = {{PrimType::INT, 0}, {}};
+  funEnv["readDouble"] = {{PrimType::DOUBLE, 0}, {}};
 
-    // Built-in functions
-    funEnv["printInt"]    = { TypeKind::VOID,   { TypeKind::INT    } };
-    funEnv["printDouble"] = { TypeKind::VOID,   { TypeKind::DOUBLE } };
-    // printString is special: it only accepts string literals; we don't give it a normal argument type
-    funEnv["readInt"]     = { TypeKind::INT,    { } };
-    funEnv["readDouble"]  = { TypeKind::DOUBLE, { } };
+  auto *prog = dynamic_cast<Program *>(p);
+  if (!prog) {
+    throw TypeError("Internal error: expected Program node");
+  }
+  if (!prog->listtopdef_ || prog->listtopdef_->empty()) {
+    throw TypeError("Program must contain at least one function definition");
+  }
 
-    Program *prog = dynamic_cast<Program*>(p);
-    if (!prog) {
-        throw TypeError("Internal error: expected Program node");
+  bool hasValidMain = false;
+  for (TopDef *td : *prog->listtopdef_) {
+    auto *fn = dynamic_cast<FnDef *>(td);
+    if (!fn) {
+      throw TypeError("Only function definitions are allowed at top level");
     }
 
-    ListTopDef *defs = prog->listtopdef_;
-    if (!defs || defs->empty()) {
-        throw TypeError("Program must contain at least one function definition");
+    if (funEnv.count(fn->ident_)) {
+      throw TypeError("Function '" + fn->ident_ + "' is defined more than once");
     }
 
-    // First pass: gather all function signatures into funEnv.
-    // Checks duplicate functions, invalid parameters, and prepares function type info.
-    bool hasValidMain = false;
+    FunType ft;
+    ft.result = fromAstType(fn->type_);
+    std::set<std::string> argNames;
 
-    for (TopDef *td : *defs) {
-        FnDef *fn = dynamic_cast<FnDef*>(td);
-        if (!fn) {
-            throw TypeError("Only function definitions are allowed at top level");
+    if (fn->listarg_) {
+      for (Arg *a : *fn->listarg_) {
+        auto *arg = dynamic_cast<Argument *>(a);
+        if (!arg) {
+          throw TypeError("Internal error: expected Argument");
         }
-
-        std::string name = fn->ident_;
-
-        if (funEnv.count(name)) {
-            std::ostringstream oss;
-            oss << "Function '" << name << "' is defined more than once";
-            throw TypeError(oss.str());
+        if (!argNames.insert(arg->ident_).second) {
+          throw TypeError("Duplicate parameter name '" + arg->ident_ +
+                          "' in function '" + fn->ident_ + "'");
         }
-
-        TypeKind resultType = fromAstType(fn->type_);
-
-        std::vector<TypeKind> argTypes;
-        std::set<std::string> argNames;
-
-        if (fn->listarg_) {
-            for (Arg *a : *fn->listarg_) {
-                Argument *arg = dynamic_cast<Argument*>(a);
-                if (!arg) {
-                    throw TypeError("Internal error: expected Argument");
-                }
-                std::string argName = arg->ident_;
-                // // Ensure all parameters in a function have unique names.
-                if (!argNames.insert(argName).second) {
-                    std::ostringstream oss;
-                    oss << "Duplicate parameter name '" << argName
-                        << "' in function '" << name << "'";
-                    throw TypeError(oss.str());
-                }
-
-                TypeKind at = fromAstType(arg->type_);
-                // Parameters cannot have type void.
-				if (at == TypeKind::VOID) {
-                    std::ostringstream oss;
-                    oss << "Parameter '" << argName
-                        << "' of function '" << name
-                        << "' cannot have type void";
-                    throw TypeError(oss.str());
-                }
-                argTypes.push_back(at);
-            }
+        SemType at = fromAstType(arg->type_);
+        if (at.base == PrimType::VOID && at.arrayDepth == 0) {
+          throw TypeError("Parameter '" + arg->ident_ + "' of function '" +
+                          fn->ident_ + "' cannot have type void");
         }
-
-        funEnv[name] = { resultType, argTypes };
-		
-		// main must be int main()
-        if (name == "main") {
-            if (resultType != TypeKind::INT || !argTypes.empty()) {
-                throw TypeError("main must have type 'int' and no parameters");
-            }
-            hasValidMain = true;
-        }
+        ft.args.push_back(at);
+      }
     }
 
-    if (!hasValidMain) {
-        throw TypeError("Program must define 'int main()'");
+    funEnv[fn->ident_] = ft;
+    if (fn->ident_ == "main") {
+      if (ft.result != SemType{PrimType::INT, 0} || !ft.args.empty()) {
+        throw TypeError("main must have type 'int' and no parameters");
+      }
+      hasValidMain = true;
     }
+  }
 
-    // --- Second pass: type-check bodies ---
-	// Second pass: use visitor to type-check all statements and expressions inside functions.
+  if (!hasValidMain) {
+    throw TypeError("Program must define 'int main()'");
+  }
 
-    for (TopDef *td : *defs) {
-        FnDef *fn = dynamic_cast<FnDef*>(td);
-        if (!fn) continue; // already checked
-
-        currentFunResult = fromAstType(fn->type_);
-        currentFunDefinitelyReturns = false;
-
-		// Set expected return type for this function and reset return tracking.
-        pushScope();
-        if (fn->listarg_) {
-            for (Arg *a : *fn->listarg_) {
-                Argument *arg = dynamic_cast<Argument*>(a);
-                TypeKind at = fromAstType(arg->type_);
-                bindVar(arg->ident_, at);
-            }
-        }
-
-        if (!fn->blk_) {
-            throw TypeError("Internal error: function with no body");
-        }
-
-        // Type-check body using visitor
-        fn->blk_->accept(this);
-
-        // Check definite return for non-void functions
-        if (currentFunResult != TypeKind::VOID) {
-            if (!blockReturns(fn->blk_)) {
-                std::ostringstream oss;
-                oss << "Function '" << fn->ident_
-                    << "' may finish without returning a value of type "
-                    << typeToString(currentFunResult);
-                throw TypeError(oss.str());
-            }
-        }
-
-        popScope();
-    }
-}
-
-// ---------- Visitor methods (some are just "nice to have") ----------
-
-void TypeChecker::visitProgram(Program *p)
-{
-    // Normally we drive from checkProgram instead of via visitor,
-    // but we implement this to be polite.
-    if (p->listtopdef_) {
-        for (TopDef *td : *p->listtopdef_) {
-            td->accept(this);
-        }
-    }
-}
-
-void TypeChecker::visitFnDef(FnDef *p)
-{
-    // Not used by checkProgram; all work is done there.
-    // Provide a no-op implementation to satisfy the interface.
-    (void)p;
-}
-
-// ---------- Scopes & environment ----------
-
-void TypeChecker::pushScope()
-{
-    varStack.emplace_back();
-}
-
-void TypeChecker::popScope()
-{
-    if (varStack.empty()) {
-        throw TypeError("Internal error: scope stack underflow");
-    }
-    varStack.pop_back();
-}
-
-void TypeChecker::bindVar(const std::string &name, TypeKind t)
-{
-    if (varStack.empty()) {
-        throw TypeError("Internal error: no active scope to bind variable");
-    }
-    auto &scope = varStack.back();
-    if (scope.count(name)) {
-        std::ostringstream oss;
-        oss << "Variable '" << name << "' is already declared in this block";
-        throw TypeError(oss.str());
-    }
-    scope[name] = t;
-}
-
-TypeKind TypeChecker::lookupVar(const std::string &name)
-{
-    for (auto it = varStack.rbegin(); it != varStack.rend(); ++it) {
-        auto found = it->find(name);
-        if (found != it->end()) {
-            return found->second;
-        }
-    }
-
-    // NEW: distinguish between "function name" and "undeclared variable"
-    if (funEnv.count(name)) {
-        std::ostringstream oss;
-        oss << "'" << name << "' is a function, not a variable";
-        throw TypeError(oss.str());
-    }
-
-    std::ostringstream oss;
-    oss << "Use of undeclared variable '" << name << "'";
-    throw TypeError(oss.str());
-}
-
-TypeKind TypeChecker::fromAstType(Type *t)
-{
-    if (dynamic_cast<Int*>(t))   return TypeKind::INT;
-    if (dynamic_cast<Doub*>(t))  return TypeKind::DOUBLE;
-    if (dynamic_cast<Bool*>(t))  return TypeKind::BOOL;
-    if (dynamic_cast<Void*>(t))  return TypeKind::VOID;
-
-    // No other types in basic Javalette
-    throw TypeError("Unsupported type in declaration");
-}
-
-// ---------- Statements ----------
-
-void TypeChecker::visitBlock(Block *p)
-{
-    // New scope for this block
+  for (TopDef *td : *prog->listtopdef_) {
+    auto *fn = dynamic_cast<FnDef *>(td);
+    currentFunResult = fromAstType(fn->type_);
     pushScope();
-    if (p->liststmt_) {
-        for (Stmt *s : *p->liststmt_) {
-            s->accept(this);
-        }
+    if (fn->listarg_) {
+      for (Arg *a : *fn->listarg_) {
+        auto *arg = dynamic_cast<Argument *>(a);
+        bindVar(arg->ident_, fromAstType(arg->type_));
+      }
+    }
+
+    fn->blk_->accept(this);
+    if (currentFunResult != SemType{PrimType::VOID, 0} &&
+        !blockReturns(fn->blk_)) {
+      throw TypeError("Function '" + fn->ident_ +
+                      "' may finish without returning a value of type " +
+                      typeToString(currentFunResult));
     }
     popScope();
+  }
 }
 
-void TypeChecker::visitDecl(Decl *p)
-{
-    // Variable declarations: Type (NoInit/Init, ...)
-    if (!p->type_) {
-        throw TypeError("Internal error: declaration without type");
+void TypeChecker::visitProgram(Program *p) {
+  if (p->listtopdef_) {
+    for (TopDef *td : *p->listtopdef_) {
+      td->accept(this);
     }
-
-    // Variables are not allowed to have type void
-    if (dynamic_cast<Void*>(p->type_) != nullptr) {
-        throw TypeError("Variables cannot have type void");
-    }
-
-    TypeKind t = fromAstType(p->type_);
-
-    if (!p->listitem_) return;
-
-    for (Item *it : *p->listitem_) {
-        if (auto ni = dynamic_cast<NoInit*>(it)) {
-            bindVar(ni->ident_, t);
-        } else if (auto in = dynamic_cast<Init*>(it)) {
-            // expr must have same type
-            if (!in->expr_) {
-                throw TypeError("Internal error: Init without expression");
-            }
-            in->expr_->accept(this);
-            if (currentExprType != t) {
-                std::ostringstream oss;
-                oss << "Type mismatch in initialization of variable '"
-                    << in->ident_ << "': expected " << typeToString(t)
-                    << ", got " << typeToString(currentExprType);
-                throw TypeError(oss.str());
-            }
-            bindVar(in->ident_, t);
-        } else {
-            throw TypeError("Internal error: unknown Item in Decl");
-        }
-    }
+  }
 }
 
-void TypeChecker::visitAss(Ass *p)
-{
-    // NEW: disallow assigning to a function
-    if (funEnv.count(p->ident_)) {
-        std::ostringstream oss;
-        oss << "Cannot assign to function '" << p->ident_ << "'";
-        throw TypeError(oss.str());
-    }
+void TypeChecker::visitFnDef(FnDef *p) { (void)p; }
 
-    TypeKind vt = lookupVar(p->ident_);
-    if (!p->expr_) {
-        throw TypeError("Internal error: assignment without expression");
-    }
-    // Disallow assigning string literals to variables at all
-    if (dynamic_cast<EString*>(p->expr_) != nullptr) {
-        throw TypeError("String literals may only be used as arguments to printString");
-    }
-    p->expr_->accept(this);
-    if (currentExprType != vt) {
-        std::ostringstream oss;
-        oss << "Type mismatch in assignment to '" << p->ident_
-            << "': expected " << typeToString(vt)
-            << ", got " << typeToString(currentExprType);
-        throw TypeError(oss.str());
-    }
+void TypeChecker::pushScope() { varStack.emplace_back(); }
+
+void TypeChecker::popScope() {
+  if (varStack.empty()) {
+    throw TypeError("Internal error: scope stack underflow");
+  }
+  varStack.pop_back();
 }
 
-void TypeChecker::visitIncr(Incr *p)
-{
-    TypeKind vt = lookupVar(p->ident_);
-    if (vt != TypeKind::INT) {
-        std::ostringstream oss;
-        oss << "Operator '++' requires operand of type int, but variable '"
-            << p->ident_ << "' has type " << typeToString(vt);
-        throw TypeError(oss.str());
-    }
+void TypeChecker::bindVar(const std::string &name, const SemType &t) {
+  if (varStack.empty()) {
+    throw TypeError("Internal error: no active scope to bind variable");
+  }
+  auto &scope = varStack.back();
+  if (scope.count(name)) {
+    throw TypeError("Variable '" + name + "' is already declared in this block");
+  }
+  scope[name] = t;
 }
 
-void TypeChecker::visitDecr(Decr *p)
-{
-    TypeKind vt = lookupVar(p->ident_);
-    if (vt != TypeKind::INT) {
-        std::ostringstream oss;
-        oss << "Operator '--' requires operand of type int, but variable '"
-            << p->ident_ << "' has type " << typeToString(vt);
-        throw TypeError(oss.str());
+bool TypeChecker::hasLocalVar(const std::string &name) const {
+  for (auto it = varStack.rbegin(); it != varStack.rend(); ++it) {
+    if (it->count(name)) {
+      return true;
     }
+  }
+  return false;
 }
 
-void TypeChecker::visitRet(Ret *p)
-{
-    if (currentFunResult == TypeKind::VOID) {
-        throw TypeError("Return with value in function of type void");
+SemType TypeChecker::lookupVar(const std::string &name) const {
+  for (auto it = varStack.rbegin(); it != varStack.rend(); ++it) {
+    auto found = it->find(name);
+    if (found != it->end()) {
+      return found->second;
     }
-    if (!p->expr_) {
-        throw TypeError("Return statement without expression in non-void function");
-    }
-    p->expr_->accept(this);
-    if (currentExprType != currentFunResult) {
-        std::ostringstream oss;
-        oss << "Return type mismatch: expected " << typeToString(currentFunResult)
-            << ", got " << typeToString(currentExprType);
-        throw TypeError(oss.str());
-    }
+  }
+  if (funEnv.count(name)) {
+    throw TypeError("'" + name + "' is a function, not a variable");
+  }
+  throw TypeError("Use of undeclared variable '" + name + "'");
 }
 
-void TypeChecker::visitVRet(VRet *p)
-{
-    (void)p;
-    if (currentFunResult != TypeKind::VOID) {
-        std::ostringstream oss;
-        oss << "Function with result type " << typeToString(currentFunResult)
-            << " must return a value";
-        throw TypeError(oss.str());
+SemType TypeChecker::fromAstType(Type *t) const {
+  if (dynamic_cast<Int *>(t)) {
+    return {PrimType::INT, 0};
+  }
+  if (dynamic_cast<Doub *>(t)) {
+    return {PrimType::DOUBLE, 0};
+  }
+  if (dynamic_cast<Bool *>(t)) {
+    return {PrimType::BOOL, 0};
+  }
+  if (dynamic_cast<Void *>(t)) {
+    return {PrimType::VOID, 0};
+  }
+  if (auto *arr = dynamic_cast<Arr *>(t)) {
+    SemType inner = fromAstType(arr->type_);
+    if (inner.base == PrimType::VOID && inner.arrayDepth == 0) {
+      throw TypeError("Arrays of void are not allowed");
     }
+    return {inner.base, inner.arrayDepth + 1};
+  }
+  throw TypeError("Unsupported type in declaration");
 }
 
-void TypeChecker::visitCond(Cond *p)
-{
-    if (!p->expr_ || !p->stmt_) {
-        throw TypeError("Internal error: malformed if-statement");
-    }
-
-    p->expr_->accept(this);
-    if (currentExprType != TypeKind::BOOL) {
-        throw TypeError("Condition of if-statement must have type boolean");
-    }
-    p->stmt_->accept(this);
+SemType TypeChecker::fromAstBaseType(::BaseType *t) const {
+  if (dynamic_cast<IntBase *>(t)) {
+    return {PrimType::INT, 0};
+  }
+  if (dynamic_cast<DoubBase *>(t)) {
+    return {PrimType::DOUBLE, 0};
+  }
+  if (dynamic_cast<BoolBase *>(t)) {
+    return {PrimType::BOOL, 0};
+  }
+  throw TypeError("Unsupported base type in array creation");
 }
 
-void TypeChecker::visitCondElse(CondElse *p)
-{
-    if (!p->expr_ || !p->stmt_1 || !p->stmt_2) {
-        throw TypeError("Internal error: malformed if-else statement");
+SemType TypeChecker::checkLhs(Lhs *lhs) const {
+  if (auto *lv = dynamic_cast<LhsVar *>(lhs)) {
+    if (funEnv.count(lv->ident_) && !hasLocalVar(lv->ident_)) {
+      throw TypeError("Cannot assign to function '" + lv->ident_ + "'");
     }
+    return lookupVar(lv->ident_);
+  }
 
-    p->expr_->accept(this);
-    if (currentExprType != TypeKind::BOOL) {
-        throw TypeError("Condition of if-else statement must have type boolean");
+  if (auto *li = dynamic_cast<LhsIndex *>(lhs)) {
+    TypeChecker *self = const_cast<TypeChecker *>(this);
+    li->expr_1->accept(self);
+    SemType arrTy = currentExprType;
+    if (!arrTy.isArray()) {
+      throw TypeError("Indexed assignment requires an array expression");
     }
-    p->stmt_1->accept(this);
-    p->stmt_2->accept(this);
+    li->expr_2->accept(self);
+    if (!isIntScalar(currentExprType)) {
+      throw TypeError("Array index must have type int");
+    }
+    return elementType(arrTy);
+  }
+
+  throw TypeError("Internal error: unsupported left-hand side");
 }
 
-void TypeChecker::visitWhile(While *p)
-{
-    if (!p->expr_ || !p->stmt_) {
-        throw TypeError("Internal error: malformed while-statement");
+void TypeChecker::visitBlock(Block *p) {
+  pushScope();
+  if (p->liststmt_) {
+    for (Stmt *s : *p->liststmt_) {
+      s->accept(this);
     }
-
-    p->expr_->accept(this);
-    if (currentExprType != TypeKind::BOOL) {
-        throw TypeError("Condition of while-statement must have type boolean");
-    }
-    p->stmt_->accept(this);
+  }
+  popScope();
 }
 
-void TypeChecker::visitSExp(SExp *p)
-{
-    if (!p->expr_) return;
-    p->expr_->accept(this);
-    // Only void expressions (i.e., calls to void functions) are allowed as statements
-    if (currentExprType != TypeKind::VOID) {
-        throw TypeError("Only expressions of type void (calls to void functions) may be used as statements");
-    }
-}
+void TypeChecker::visitDecl(Decl *p) {
+  SemType t = fromAstType(p->type_);
+  if (t == SemType{PrimType::VOID, 0}) {
+    throw TypeError("Variables cannot have type void");
+  }
 
-// ---------- Expressions ----------
+  if (!p->listitem_) {
+    return;
+  }
 
-void TypeChecker::visitEVar(EVar *p)
-{
-    currentExprType = lookupVar(p->ident_);
-}
-
-void TypeChecker::visitELitInt(ELitInt *p)
-{
-    (void)p;
-    currentExprType = TypeKind::INT;
-}
-
-void TypeChecker::visitELitDoub(ELitDoub *p)
-{
-    (void)p;
-    currentExprType = TypeKind::DOUBLE;
-}
-
-void TypeChecker::visitELitTrue(ELitTrue *p)
-{
-    (void)p;
-    currentExprType = TypeKind::BOOL;
-}
-
-void TypeChecker::visitELitFalse(ELitFalse *p)
-{
-    (void)p;
-    currentExprType = TypeKind::BOOL;
-}
-
-void TypeChecker::visitEString(EString *p)
-{
-    (void)p;
-    // String literals have no first-class type in Javalette.
-    // We mark them as "void" to make them illegal in normal expressions.
-    currentExprType = TypeKind::VOID;
-}
-
-void TypeChecker::visitNeg(Neg *p)
-{
-    if (!p->expr_) {
-        throw TypeError("Internal error: negation without operand");
-    }
-    p->expr_->accept(this);
-    if (currentExprType != TypeKind::INT &&
-        currentExprType != TypeKind::DOUBLE) {
-        throw TypeError("Unary '-' expects operand of type int or double");
-    }
-    // Result type is same as operand
-}
-
-void TypeChecker::visitNot(Not *p)
-{
-    if (!p->expr_) {
-        throw TypeError("Internal error: '!' without operand");
-    }
-    p->expr_->accept(this);
-    if (currentExprType != TypeKind::BOOL) {
-        throw TypeError("Unary '!' expects operand of type boolean");
-    }
-    // Result type is boolean
-}
-
-void TypeChecker::visitEApp(EApp *p)
-{
-    std::string name = p->ident_;
-
-    // A local variable shadows a top-level function name.
-    // In that case, this identifier cannot be used for a function call.
-    for (auto it = varStack.rbegin(); it != varStack.rend(); ++it) {
-        if (it->count(name)) {
-            std::ostringstream oss;
-            oss << "'" << name << "' is a variable, not a function";
-            throw TypeError(oss.str());
-        }
-    }
-
-    // Special handling for printString: its argument must be a string literal
-    if (name == "printString") {
-        if (!p->listexpr_ || p->listexpr_->size() != 1) {
-            throw TypeError("printString expects exactly one argument");
-        }
-        Expr *arg = (*p->listexpr_)[0];
-        if (!dynamic_cast<EString*>(arg)) {
-            throw TypeError("printString argument must be a string literal");
-        }
-        // No need to visit arg; there are no subexpressions inside EString
-        currentExprType = TypeKind::VOID;
-        return;
-    }
-
-    auto it = funEnv.find(name);
-    if (it == funEnv.end()) {
-        std::ostringstream oss;
-        oss << "Call to undefined function '" << name << "'";
-        throw TypeError(oss.str());
-    }
-
-    const FunType &ft = it->second;
-    std::size_t numArgs = p->listexpr_ ? p->listexpr_->size() : 0;
-    if (numArgs != ft.args.size()) {
-        std::ostringstream oss;
-        oss << "Function '" << name << "' expects " << ft.args.size()
-            << " arguments, but " << numArgs << " given";
-        throw TypeError(oss.str());
-    }
-
-    for (std::size_t i = 0; i < numArgs; ++i) {
-        Expr *arg = (*p->listexpr_)[i];
-        arg->accept(this);
-        if (currentExprType != ft.args[i]) {
-            std::ostringstream oss;
-            oss << "Type mismatch in argument " << (i + 1)
-                << " of call to '" << name
-                << "': expected " << typeToString(ft.args[i])
-                << ", got " << typeToString(currentExprType);
-            throw TypeError(oss.str());
-        }
-    }
-
-    currentExprType = ft.result;
-}
-
-void TypeChecker::visitEMul(EMul *p)
-{
-    if (!p->expr_1 || !p->expr_2 || !p->mulop_) {
-        throw TypeError("Internal error: malformed multiplicative expression");
-    }
-
-    p->expr_1->accept(this);
-    TypeKind t1 = currentExprType;
-    p->expr_2->accept(this);
-    TypeKind t2 = currentExprType;
-
-    bool isMod = (dynamic_cast<Mod*>(p->mulop_) != nullptr);
-
-    if (isMod) {
-        // % : int % int -> int
-        if (t1 != TypeKind::INT || t2 != TypeKind::INT) {
-            throw TypeError("Operator '%' is only defined on integers");
-        }
-        currentExprType = TypeKind::INT;
+  for (Item *it : *p->listitem_) {
+    if (auto *ni = dynamic_cast<NoInit *>(it)) {
+      bindVar(ni->ident_, t);
+    } else if (auto *in = dynamic_cast<Init *>(it)) {
+      in->expr_->accept(this);
+      if (currentExprType != t) {
+        throw TypeError("Type mismatch in initialization of variable '" +
+                        in->ident_ + "': expected " + typeToString(t) +
+                        ", got " + typeToString(currentExprType));
+      }
+      bindVar(in->ident_, t);
     } else {
-        // *, / : both operands same and numeric
-        if (t1 != t2 || (t1 != TypeKind::INT && t1 != TypeKind::DOUBLE)) {
-            throw TypeError("Operators '*' and '/' require both operands to have the same numeric type");
-        }
-        currentExprType = t1;
+      throw TypeError("Internal error: unknown Item in Decl");
     }
+  }
 }
 
-void TypeChecker::visitEAdd(EAdd *p)
-{
-    if (!p->expr_1 || !p->expr_2 || !p->addop_) {
-        throw TypeError("Internal error: malformed additive expression");
-    }
-
-    p->expr_1->accept(this);
-    TypeKind t1 = currentExprType;
-    p->expr_2->accept(this);
-    TypeKind t2 = currentExprType;
-
-    // + and - : both operands same and numeric
-    if (t1 != t2 || (t1 != TypeKind::INT && t1 != TypeKind::DOUBLE)) {
-        throw TypeError("Operators '+' and '-' require both operands to have the same numeric type");
-    }
-    currentExprType = t1;
+void TypeChecker::visitAss(Ass *p) {
+  SemType lhsType = checkLhs(p->lhs_);
+  if (dynamic_cast<EString *>(p->expr_)) {
+    throw TypeError("String literals may only be used as arguments to printString");
+  }
+  p->expr_->accept(this);
+  if (currentExprType != lhsType) {
+    throw TypeError("Type mismatch in assignment: expected " +
+                    typeToString(lhsType) + ", got " +
+                    typeToString(currentExprType));
+  }
 }
 
-void TypeChecker::visitERel(ERel *p)
-{
-    if (!p->expr_1 || !p->expr_2 || !p->relop_) {
-        throw TypeError("Internal error: malformed relational expression");
-    }
-
-    p->expr_1->accept(this);
-    TypeKind t1 = currentExprType;
-    p->expr_2->accept(this);
-    TypeKind t2 = currentExprType;
-
-    bool isEq = dynamic_cast<EQU*>(p->relop_) || dynamic_cast<NE*>(p->relop_);
-
-    if (isEq) {
-        // ==, != : operands same type; allowed on int, double, bool
-        if (t1 != t2 ||
-            (t1 != TypeKind::INT &&
-             t1 != TypeKind::DOUBLE &&
-             t1 != TypeKind::BOOL)) {
-            throw TypeError("Operators '==' and '!=' require operands of the same primitive type");
-        }
-    } else {
-        // <, <=, >, >= : operands same numeric type
-        if (t1 != t2 ||
-            (t1 != TypeKind::INT && t1 != TypeKind::DOUBLE)) {
-            throw TypeError("Relational operators (<, <=, >, >=) require operands of the same numeric type");
-        }
-    }
-
-    currentExprType = TypeKind::BOOL;
+void TypeChecker::visitIncr(Incr *p) {
+  SemType t = checkLhs(p->lhs_);
+  if (!isIntScalar(t)) {
+    throw TypeError("Operator '++' requires operand of type int");
+  }
 }
 
-void TypeChecker::visitEAnd(EAnd *p)
-{
-    if (!p->expr_1 || !p->expr_2) {
-        throw TypeError("Internal error: malformed && expression");
-    }
-
-    p->expr_1->accept(this);
-    if (currentExprType != TypeKind::BOOL) {
-        throw TypeError("Left operand of '&&' must have type boolean");
-    }
-    p->expr_2->accept(this);
-    if (currentExprType != TypeKind::BOOL) {
-        throw TypeError("Right operand of '&&' must have type boolean");
-    }
-
-    currentExprType = TypeKind::BOOL;
+void TypeChecker::visitDecr(Decr *p) {
+  SemType t = checkLhs(p->lhs_);
+  if (!isIntScalar(t)) {
+    throw TypeError("Operator '--' requires operand of type int");
+  }
 }
 
-void TypeChecker::visitEOr(EOr *p)
-{
-    if (!p->expr_1 || !p->expr_2) {
-        throw TypeError("Internal error: malformed || expression");
-    }
-
-    p->expr_1->accept(this);
-    if (currentExprType != TypeKind::BOOL) {
-        throw TypeError("Left operand of '||' must have type boolean");
-    }
-    p->expr_2->accept(this);
-    if (currentExprType != TypeKind::BOOL) {
-        throw TypeError("Right operand of '||' must have type boolean");
-    }
-
-    currentExprType = TypeKind::BOOL;
+void TypeChecker::visitRet(Ret *p) {
+  if (currentFunResult == SemType{PrimType::VOID, 0}) {
+    throw TypeError("Return with value in function of type void");
+  }
+  p->expr_->accept(this);
+  if (currentExprType != currentFunResult) {
+    throw TypeError("Return type mismatch: expected " +
+                    typeToString(currentFunResult) + ", got " +
+                    typeToString(currentExprType));
+  }
 }
 
-void TypeChecker::visitEAnnotExp(EAnnotExp *p)
-{
-    if (!p->type_ || !p->expr_) {
-        throw TypeError("Internal error: malformed annotated expression");
-    }
+void TypeChecker::visitVRet(VRet *p) {
+  (void)p;
+  if (currentFunResult != SemType{PrimType::VOID, 0}) {
+    throw TypeError("Function with result type " + typeToString(currentFunResult) +
+                    " must return a value");
+  }
+}
 
-    TypeKind ann = fromAstType(p->type_);
-    p->expr_->accept(this);
-    if (currentExprType != ann) {
-        throw TypeError("Type annotation does not match the expression type");
+void TypeChecker::visitCond(Cond *p) {
+  p->expr_->accept(this);
+  if (!isBoolScalar(currentExprType)) {
+    throw TypeError("Condition of if-statement must have type boolean");
+  }
+  p->stmt_->accept(this);
+}
+
+void TypeChecker::visitCondElse(CondElse *p) {
+  p->expr_->accept(this);
+  if (!isBoolScalar(currentExprType)) {
+    throw TypeError("Condition of if-else statement must have type boolean");
+  }
+  p->stmt_1->accept(this);
+  p->stmt_2->accept(this);
+}
+
+void TypeChecker::visitWhile(While *p) {
+  p->expr_->accept(this);
+  if (!isBoolScalar(currentExprType)) {
+    throw TypeError("Condition of while-statement must have type boolean");
+  }
+  p->stmt_->accept(this);
+}
+
+void TypeChecker::visitForEach(ForEach *p) {
+  SemType itemType = fromAstType(p->type_);
+  if (itemType == SemType{PrimType::VOID, 0}) {
+    throw TypeError("foreach variable cannot have type void");
+  }
+
+  p->expr_->accept(this);
+  SemType arrType = currentExprType;
+  if (!arrType.isArray()) {
+    throw TypeError("foreach expects an array expression");
+  }
+  if (elementType(arrType) != itemType) {
+    throw TypeError("foreach variable type " + typeToString(itemType) +
+                    " does not match array element type " +
+                    typeToString(elementType(arrType)));
+  }
+
+  pushScope();
+  bindVar(p->ident_, itemType);
+  p->stmt_->accept(this);
+  popScope();
+}
+
+void TypeChecker::visitSExp(SExp *p) {
+  p->expr_->accept(this);
+  if (currentExprType != SemType{PrimType::VOID, 0}) {
+    throw TypeError(
+        "Only expressions of type void may be used as statements");
+  }
+}
+
+void TypeChecker::visitEVar(EVar *p) { currentExprType = lookupVar(p->ident_); }
+
+void TypeChecker::visitELitInt(ELitInt *p) {
+  (void)p;
+  currentExprType = {PrimType::INT, 0};
+}
+
+void TypeChecker::visitELitDoub(ELitDoub *p) {
+  (void)p;
+  currentExprType = {PrimType::DOUBLE, 0};
+}
+
+void TypeChecker::visitELitTrue(ELitTrue *p) {
+  (void)p;
+  currentExprType = {PrimType::BOOL, 0};
+}
+
+void TypeChecker::visitELitFalse(ELitFalse *p) {
+  (void)p;
+  currentExprType = {PrimType::BOOL, 0};
+}
+
+void TypeChecker::visitEString(EString *p) {
+  (void)p;
+  currentExprType = {PrimType::VOID, 0};
+}
+
+void TypeChecker::visitENew(ENew *p) {
+  SemType elemType = fromAstBaseType(p->basetype_);
+  if (p->listarrsize_->empty()) {
+    throw TypeError("Array creation requires at least one dimension");
+  }
+  int depth = 0;
+  for (ArrSize *sz : *p->listarrsize_) {
+    auto *dim = dynamic_cast<NewDim *>(sz);
+    dim->expr_->accept(this);
+    if (!isIntScalar(currentExprType)) {
+      throw TypeError("Array length expression must have type int");
     }
-    currentExprType = ann;
+    ++depth;
+  }
+  currentExprType = {elemType.base, depth};
+}
+
+void TypeChecker::visitEIndex(EIndex *p) {
+  p->expr_1->accept(this);
+  SemType arrType = currentExprType;
+  if (!arrType.isArray()) {
+    throw TypeError("Indexing requires an array expression");
+  }
+  p->expr_2->accept(this);
+  if (!isIntScalar(currentExprType)) {
+    throw TypeError("Array index must have type int");
+  }
+  currentExprType = elementType(arrType);
+}
+
+void TypeChecker::visitELength(ELength *p) {
+  if (p->ident_ != "length") {
+    throw TypeError("Only the 'length' attribute is supported on arrays");
+  }
+  p->expr_->accept(this);
+  if (!currentExprType.isArray()) {
+    throw TypeError("Only arrays have a length attribute");
+  }
+  currentExprType = {PrimType::INT, 0};
+}
+
+void TypeChecker::visitNeg(Neg *p) {
+  p->expr_->accept(this);
+  if (!isNumericScalar(currentExprType)) {
+    throw TypeError("Unary '-' expects operand of type int or double");
+  }
+}
+
+void TypeChecker::visitNot(Not *p) {
+  p->expr_->accept(this);
+  if (!isBoolScalar(currentExprType)) {
+    throw TypeError("Unary '!' expects operand of type boolean");
+  }
+}
+
+void TypeChecker::visitEApp(EApp *p) {
+  const std::string &name = p->ident_;
+  if (hasLocalVar(name)) {
+    throw TypeError("'" + name + "' is a variable, not a function");
+  }
+
+  if (name == "printString") {
+    if (!p->listexpr_ || p->listexpr_->size() != 1) {
+      throw TypeError("printString expects exactly one argument");
+    }
+    if (!dynamic_cast<EString *>((*p->listexpr_)[0])) {
+      throw TypeError("printString argument must be a string literal");
+    }
+    currentExprType = {PrimType::VOID, 0};
+    return;
+  }
+
+  auto it = funEnv.find(name);
+  if (it == funEnv.end()) {
+    throw TypeError("Call to undefined function '" + name + "'");
+  }
+  const FunType &ft = it->second;
+  const std::size_t numArgs = p->listexpr_ ? p->listexpr_->size() : 0;
+  if (numArgs != ft.args.size()) {
+    std::ostringstream oss;
+    oss << "Function '" << name << "' expects " << ft.args.size()
+        << " arguments, but " << numArgs << " given";
+    throw TypeError(oss.str());
+  }
+
+  for (std::size_t i = 0; i < numArgs; ++i) {
+    (*p->listexpr_)[i]->accept(this);
+    if (currentExprType != ft.args[i]) {
+      std::ostringstream oss;
+      oss << "Type mismatch in argument " << (i + 1) << " of call to '"
+          << name << "': expected " << typeToString(ft.args[i]) << ", got "
+          << typeToString(currentExprType);
+      throw TypeError(oss.str());
+    }
+  }
+  currentExprType = ft.result;
+}
+
+void TypeChecker::visitEMul(EMul *p) {
+  p->expr_1->accept(this);
+  SemType t1 = currentExprType;
+  p->expr_2->accept(this);
+  SemType t2 = currentExprType;
+
+  const bool isMod = dynamic_cast<Mod *>(p->mulop_) != nullptr;
+  if (isMod) {
+    if (!isIntScalar(t1) || !isIntScalar(t2)) {
+      throw TypeError("Operator '%' is only defined on integers");
+    }
+    currentExprType = {PrimType::INT, 0};
+    return;
+  }
+
+  if (t1 != t2 || !isNumericScalar(t1)) {
+    throw TypeError(
+        "Operators '*' and '/' require both operands to have the same numeric type");
+  }
+  currentExprType = t1;
+}
+
+void TypeChecker::visitEAdd(EAdd *p) {
+  p->expr_1->accept(this);
+  SemType t1 = currentExprType;
+  p->expr_2->accept(this);
+  SemType t2 = currentExprType;
+  if (t1 != t2 || !isNumericScalar(t1)) {
+    throw TypeError(
+        "Operators '+' and '-' require both operands to have the same numeric type");
+  }
+  currentExprType = t1;
+}
+
+void TypeChecker::visitERel(ERel *p) {
+  p->expr_1->accept(this);
+  SemType t1 = currentExprType;
+  p->expr_2->accept(this);
+  SemType t2 = currentExprType;
+
+  if (t1 != t2 || t1.isArray() || t1 == SemType{PrimType::VOID, 0}) {
+    throw TypeError("Invalid operand types for relational operator");
+  }
+
+  const bool eqOnly = dynamic_cast<EQU *>(p->relop_) || dynamic_cast<NE *>(p->relop_);
+  if (!eqOnly && !isNumericScalar(t1)) {
+    throw TypeError("Ordering comparisons require operands of type int or double");
+  }
+  currentExprType = {PrimType::BOOL, 0};
+}
+
+void TypeChecker::visitEAnd(EAnd *p) {
+  p->expr_1->accept(this);
+  if (!isBoolScalar(currentExprType)) {
+    throw TypeError("Operator '&&' requires boolean operands");
+  }
+  p->expr_2->accept(this);
+  if (!isBoolScalar(currentExprType)) {
+    throw TypeError("Operator '&&' requires boolean operands");
+  }
+  currentExprType = {PrimType::BOOL, 0};
+}
+
+void TypeChecker::visitEOr(EOr *p) {
+  p->expr_1->accept(this);
+  if (!isBoolScalar(currentExprType)) {
+    throw TypeError("Operator '||' requires boolean operands");
+  }
+  p->expr_2->accept(this);
+  if (!isBoolScalar(currentExprType)) {
+    throw TypeError("Operator '||' requires boolean operands");
+  }
+  currentExprType = {PrimType::BOOL, 0};
+}
+
+void TypeChecker::visitEAnnotExp(EAnnotExp *p) {
+  SemType annotated = fromAstType(p->type_);
+  p->expr_->accept(this);
+  if (currentExprType != annotated) {
+    throw TypeError("Annotated expression has type " +
+                    typeToString(currentExprType) + ", not " +
+                    typeToString(annotated));
+  }
+  currentExprType = annotated;
 }

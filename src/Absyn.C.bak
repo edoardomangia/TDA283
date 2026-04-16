@@ -1228,126 +1228,6 @@ Fun *Fun::clone() const
 
 
 
-/********************   IntBase    ********************/
-IntBase::IntBase()
-{
-
-}
-
-IntBase::IntBase(const IntBase & other)
-{
-
-}
-
-IntBase &IntBase::operator=(const IntBase & other)
-{
-  IntBase tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void IntBase::swap(IntBase & other)
-{
-
-}
-
-IntBase::~IntBase()
-{
-
-}
-
-void IntBase::accept(Visitor *v)
-{
-  v->visitIntBase(this);
-}
-
-IntBase *IntBase::clone() const
-{
-  return new IntBase(*this);
-}
-
-
-
-/********************   DoubBase    ********************/
-DoubBase::DoubBase()
-{
-
-}
-
-DoubBase::DoubBase(const DoubBase & other)
-{
-
-}
-
-DoubBase &DoubBase::operator=(const DoubBase & other)
-{
-  DoubBase tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void DoubBase::swap(DoubBase & other)
-{
-
-}
-
-DoubBase::~DoubBase()
-{
-
-}
-
-void DoubBase::accept(Visitor *v)
-{
-  v->visitDoubBase(this);
-}
-
-DoubBase *DoubBase::clone() const
-{
-  return new DoubBase(*this);
-}
-
-
-
-/********************   BoolBase    ********************/
-BoolBase::BoolBase()
-{
-
-}
-
-BoolBase::BoolBase(const BoolBase & other)
-{
-
-}
-
-BoolBase &BoolBase::operator=(const BoolBase & other)
-{
-  BoolBase tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void BoolBase::swap(BoolBase & other)
-{
-
-}
-
-BoolBase::~BoolBase()
-{
-
-}
-
-void BoolBase::accept(Visitor *v)
-{
-  v->visitBoolBase(this);
-}
-
-BoolBase *BoolBase::clone() const
-{
-  return new BoolBase(*this);
-}
-
-
-
 /********************   EVar    ********************/
 EVar::EVar(Ident p1)
 {
@@ -1648,17 +1528,17 @@ EString *EString::clone() const
 
 
 /********************   ENew    ********************/
-ENew::ENew(BaseType *p1, ListArrSize *p2)
+ENew::ENew(Type *p1, Expr *p2)
 {
-  basetype_ = p1;
-  listarrsize_ = p2;
+  type_ = p1;
+  expr_ = p2;
 
 }
 
 ENew::ENew(const ENew & other)
 {
-  basetype_ = other.basetype_->clone();
-  listarrsize_ = other.listarrsize_->clone();
+  type_ = other.type_->clone();
+  expr_ = other.expr_->clone();
 
 }
 
@@ -1671,15 +1551,15 @@ ENew &ENew::operator=(const ENew & other)
 
 void ENew::swap(ENew & other)
 {
-  std::swap(basetype_, other.basetype_);
-  std::swap(listarrsize_, other.listarrsize_);
+  std::swap(type_, other.type_);
+  std::swap(expr_, other.expr_);
 
 }
 
 ENew::~ENew()
 {
-  delete(basetype_);
-  delete(listarrsize_);
+  delete(type_);
+  delete(expr_);
 
 }
 
@@ -2174,50 +2054,6 @@ void EAnnotExp::accept(Visitor *v)
 EAnnotExp *EAnnotExp::clone() const
 {
   return new EAnnotExp(*this);
-}
-
-
-
-/********************   NewDim    ********************/
-NewDim::NewDim(Expr *p1)
-{
-  expr_ = p1;
-
-}
-
-NewDim::NewDim(const NewDim & other)
-{
-  expr_ = other.expr_->clone();
-
-}
-
-NewDim &NewDim::operator=(const NewDim & other)
-{
-  NewDim tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void NewDim::swap(NewDim & other)
-{
-  std::swap(expr_, other.expr_);
-
-}
-
-NewDim::~NewDim()
-{
-  delete(expr_);
-
-}
-
-void NewDim::accept(Visitor *v)
-{
-  v->visitNewDim(this);
-}
-
-NewDim *NewDim::clone() const
-{
-  return new NewDim(*this);
 }
 
 
@@ -2748,24 +2584,6 @@ ListType *ListType::clone() const
 }
 
 ListType* consListType(Type* x, ListType* xs) {
-  xs->insert(xs->begin(), x);
-  return xs;
-}
-
-
-/********************   ListArrSize    ********************/
-
-void ListArrSize::accept(Visitor *v)
-{
-  v->visitListArrSize(this);
-}
-
-ListArrSize *ListArrSize::clone() const
-{
-  return new ListArrSize(*this);
-}
-
-ListArrSize* consListArrSize(ArrSize* x, ListArrSize* xs) {
   xs->insert(xs->begin(), x);
   return xs;
 }

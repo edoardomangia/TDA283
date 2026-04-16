@@ -18,9 +18,7 @@ void Skeleton::visitBlk(Blk *t) {} //abstract class
 void Skeleton::visitStmt(Stmt *t) {} //abstract class
 void Skeleton::visitItem(Item *t) {} //abstract class
 void Skeleton::visitType(Type *t) {} //abstract class
-void Skeleton::visitBaseType(BaseType *t) {} //abstract class
 void Skeleton::visitExpr(Expr *t) {} //abstract class
-void Skeleton::visitArrSize(ArrSize *t) {} //abstract class
 void Skeleton::visitAddOp(AddOp *t) {} //abstract class
 void Skeleton::visitMulOp(MulOp *t) {} //abstract class
 void Skeleton::visitRelOp(RelOp *t) {} //abstract class
@@ -251,27 +249,6 @@ void Skeleton::visitFun(Fun *fun)
 
 }
 
-void Skeleton::visitIntBase(IntBase *int_base)
-{
-  /* Code For IntBase Goes Here */
-
-
-}
-
-void Skeleton::visitDoubBase(DoubBase *doub_base)
-{
-  /* Code For DoubBase Goes Here */
-
-
-}
-
-void Skeleton::visitBoolBase(BoolBase *bool_base)
-{
-  /* Code For BoolBase Goes Here */
-
-
-}
-
 void Skeleton::visitEVar(EVar *e_var)
 {
   /* Code For EVar Goes Here */
@@ -331,8 +308,8 @@ void Skeleton::visitENew(ENew *e_new)
 {
   /* Code For ENew Goes Here */
 
-  if (e_new->basetype_) e_new->basetype_->accept(this);
-  if (e_new->listarrsize_) e_new->listarrsize_->accept(this);
+  if (e_new->type_) e_new->type_->accept(this);
+  if (e_new->expr_) e_new->expr_->accept(this);
 
 }
 
@@ -424,14 +401,6 @@ void Skeleton::visitEAnnotExp(EAnnotExp *e_annot_exp)
 
   if (e_annot_exp->type_) e_annot_exp->type_->accept(this);
   if (e_annot_exp->expr_) e_annot_exp->expr_->accept(this);
-
-}
-
-void Skeleton::visitNewDim(NewDim *new_dim)
-{
-  /* Code For NewDim Goes Here */
-
-  if (new_dim->expr_) new_dim->expr_->accept(this);
 
 }
 
@@ -548,14 +517,6 @@ void Skeleton::visitListItem(ListItem *list_item)
 void Skeleton::visitListType(ListType *list_type)
 {
   for (ListType::iterator i = list_type->begin() ; i != list_type->end() ; ++i)
-  {
-    (*i)->accept(this);
-  }
-}
-
-void Skeleton::visitListArrSize(ListArrSize *list_arr_size)
-{
-  for (ListArrSize::iterator i = list_arr_size->begin() ; i != list_arr_size->end() ; ++i)
   {
     (*i)->accept(this);
   }

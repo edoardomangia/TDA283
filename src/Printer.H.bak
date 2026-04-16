@@ -78,10 +78,6 @@ class PrintAbsyn : public Visitor
   void visitVoid(Void *p);
   void visitArr(Arr *p);
   void visitFun(Fun *p);
-  void visitBaseType(BaseType *p); /* abstract class */
-  void visitIntBase(IntBase *p);
-  void visitDoubBase(DoubBase *p);
-  void visitBoolBase(BoolBase *p);
   void visitListType(ListType *p);
   void iterListType(ListType::const_iterator i, ListType::const_iterator j);
   void visitExpr(Expr *p); /* abstract class */
@@ -103,10 +99,6 @@ class PrintAbsyn : public Visitor
   void visitEAnd(EAnd *p);
   void visitEOr(EOr *p);
   void visitEAnnotExp(EAnnotExp *p);
-  void visitArrSize(ArrSize *p); /* abstract class */
-  void visitNewDim(NewDim *p);
-  void visitListArrSize(ListArrSize *p);
-  void iterListArrSize(ListArrSize::const_iterator i, ListArrSize::const_iterator j);
   void visitListExpr(ListExpr *p);
   void iterListExpr(ListExpr::const_iterator i, ListExpr::const_iterator j);
   void visitAddOp(AddOp *p); /* abstract class */
@@ -260,10 +252,6 @@ class ShowAbsyn : public Visitor
   void visitVoid(Void *p);
   void visitArr(Arr *p);
   void visitFun(Fun *p);
-  void visitBaseType(BaseType *p); /* abstract class */
-  void visitIntBase(IntBase *p);
-  void visitDoubBase(DoubBase *p);
-  void visitBoolBase(BoolBase *p);
   void visitListType(ListType *p);
   void iterListType(ListType::const_iterator i, ListType::const_iterator j);
   void visitExpr(Expr *p); /* abstract class */
@@ -285,10 +273,6 @@ class ShowAbsyn : public Visitor
   void visitEAnd(EAnd *p);
   void visitEOr(EOr *p);
   void visitEAnnotExp(EAnnotExp *p);
-  void visitArrSize(ArrSize *p); /* abstract class */
-  void visitNewDim(NewDim *p);
-  void visitListArrSize(ListArrSize *p);
-  void iterListArrSize(ListArrSize::const_iterator i, ListArrSize::const_iterator j);
   void visitListExpr(ListExpr *p);
   void iterListExpr(ListExpr::const_iterator i, ListExpr::const_iterator j);
   void visitAddOp(AddOp *p); /* abstract class */
