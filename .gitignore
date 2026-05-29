@@ -1,1 +1,13 @@
-*.o
+/src/*.o
+/src/*.bc
+/src/*.ll
+/src/*.s
+/src/*.bak
+/src/jlc
+/jlc
+/jlc_riscv
+/Bison.H
+/nvim.log
+/tmp/
+/.codex/
+/.rumdl_cache/

@@ -77,28 +77,27 @@ extern int javalette_debug;
     _DEQ = 278,                    /* _DEQ  */
     _GT = 279,                     /* _GT  */
     _GTEQ = 280,                   /* _GTEQ  */
-    _AT = 281,                     /* _AT  */
-    _LBRACK = 282,                 /* _LBRACK  */
-    _RBRACK = 283,                 /* _RBRACK  */
-    _KW_boolean = 284,             /* _KW_boolean  */
-    _KW_double = 285,              /* _KW_double  */
-    _KW_else = 286,                /* _KW_else  */
-    _KW_false = 287,               /* _KW_false  */
-    _KW_for = 288,                 /* _KW_for  */
-    _KW_if = 289,                  /* _KW_if  */
-    _KW_int = 290,                 /* _KW_int  */
-    _KW_new = 291,                 /* _KW_new  */
-    _KW_return = 292,              /* _KW_return  */
-    _KW_true = 293,                /* _KW_true  */
-    _KW_void = 294,                /* _KW_void  */
-    _KW_while = 295,               /* _KW_while  */
-    _LBRACE = 296,                 /* _LBRACE  */
-    _DBAR = 297,                   /* _DBAR  */
-    _RBRACE = 298,                 /* _RBRACE  */
-    _STRING_ = 299,                /* _STRING_  */
-    _INTEGER_ = 300,               /* _INTEGER_  */
-    _DOUBLE_ = 301,                /* _DOUBLE_  */
-    _IDENT_ = 302                  /* _IDENT_  */
+    _LBRACK = 281,                 /* _LBRACK  */
+    _RBRACK = 282,                 /* _RBRACK  */
+    _KW_boolean = 283,             /* _KW_boolean  */
+    _KW_double = 284,              /* _KW_double  */
+    _KW_else = 285,                /* _KW_else  */
+    _KW_false = 286,               /* _KW_false  */
+    _KW_for = 287,                 /* _KW_for  */
+    _KW_if = 288,                  /* _KW_if  */
+    _KW_int = 289,                 /* _KW_int  */
+    _KW_new = 290,                 /* _KW_new  */
+    _KW_return = 291,              /* _KW_return  */
+    _KW_true = 292,                /* _KW_true  */
+    _KW_void = 293,                /* _KW_void  */
+    _KW_while = 294,               /* _KW_while  */
+    _LBRACE = 295,                 /* _LBRACE  */
+    _DBAR = 296,                   /* _DBAR  */
+    _RBRACE = 297,                 /* _RBRACE  */
+    _STRING_ = 298,                /* _STRING_  */
+    _INTEGER_ = 299,               /* _INTEGER_  */
+    _DOUBLE_ = 300,                /* _DOUBLE_  */
+    _IDENT_ = 301                  /* _IDENT_  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -135,7 +134,7 @@ union YYSTYPE
   MulOp* mulop_;
   RelOp* relop_;
 
-#line 139 "Bison.H"
+#line 138 "Bison.H"
 
 };
 typedef union YYSTYPE YYSTYPE;

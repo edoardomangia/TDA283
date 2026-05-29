@@ -64,7 +64,6 @@ class Arr;
 class IntBase;
 class DoubBase;
 class BoolBase;
-class Fun;
 class EVar;
 class ELitInt;
 class ELitDoub;
@@ -94,7 +93,6 @@ class GTH;
 class GE;
 class EQU;
 class NE;
-class EAnnotExp;
 class ListTopDef;
 class ListArg;
 class ListStmt;
@@ -152,7 +150,6 @@ public:
   virtual void visitIntBase(IntBase *p) = 0;
   virtual void visitDoubBase(DoubBase *p) = 0;
   virtual void visitBoolBase(BoolBase *p) = 0;
-  virtual void visitFun(Fun *p) = 0;
   virtual void visitEVar(EVar *p) = 0;
   virtual void visitELitInt(ELitInt *p) = 0;
   virtual void visitELitDoub(ELitDoub *p) = 0;
@@ -182,7 +179,6 @@ public:
   virtual void visitGE(GE *p) = 0;
   virtual void visitEQU(EQU *p) = 0;
   virtual void visitNE(NE *p) = 0;
-  virtual void visitEAnnotExp(EAnnotExp *p) = 0;
   virtual void visitListTopDef(ListTopDef *p) = 0;
   virtual void visitListArg(ListArg *p) = 0;
   virtual void visitListStmt(ListStmt *p) = 0;
@@ -684,21 +680,6 @@ public:
   void swap(Arr &);
 };
 
-class Fun : public Type
-{
-public:
-  Type *type_;
-  ListType *listtype_;
-
-  Fun(const Fun &);
-  Fun &operator=(const Fun &);
-  Fun(Type *p1, ListType *p2);
-  ~Fun();
-  virtual void accept(Visitor *v);
-  virtual Fun *clone() const;
-  void swap(Fun &);
-};
-
 class IntBase : public BaseType
 {
 public:
@@ -984,21 +965,6 @@ public:
   virtual void accept(Visitor *v);
   virtual EOr *clone() const;
   void swap(EOr &);
-};
-
-class EAnnotExp : public Expr
-{
-public:
-  Type *type_;
-  Expr *expr_;
-
-  EAnnotExp(const EAnnotExp &);
-  EAnnotExp &operator=(const EAnnotExp &);
-  EAnnotExp(Type *p1, Expr *p2);
-  ~EAnnotExp();
-  virtual void accept(Visitor *v);
-  virtual EAnnotExp *clone() const;
-  void swap(EAnnotExp &);
 };
 
 class NewDim : public ArrSize

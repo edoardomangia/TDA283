@@ -17,7 +17,6 @@ COMMON_OBJS = \
 	$(SRC_DIR)/Buffer.o \
 	$(SRC_DIR)/Lexer.o \
 	$(SRC_DIR)/Parser.o \
-	$(SRC_DIR)/Printer.o \
 	$(SRC_DIR)/Skeleton.o \
 	$(SRC_DIR)/TypeChecker.o
 LLVM_OBJS = $(COMMON_OBJS) $(SRC_DIR)/CodeGenLLVM.o $(SRC_DIR)/main.o
@@ -67,9 +66,6 @@ $(SRC_DIR)/Lexer.o: $(SRC_DIR)/Lexer.C $(SRC_DIR)/Bison.H
 	$(CC) $(CXXFLAGS) -Wno-sign-conversion -c $< -o $@
 
 $(SRC_DIR)/Parser.o: $(SRC_DIR)/Parser.C $(SRC_DIR)/Absyn.H $(SRC_DIR)/Bison.H
-	$(CC) $(CXXFLAGS) -c $< -o $@
-
-$(SRC_DIR)/Printer.o: $(SRC_DIR)/Printer.C $(SRC_DIR)/Printer.H $(SRC_DIR)/Absyn.H
 	$(CC) $(CXXFLAGS) -c $< -o $@
 
 $(SRC_DIR)/Skeleton.o: $(SRC_DIR)/Skeleton.C $(SRC_DIR)/Skeleton.H $(SRC_DIR)/Absyn.H

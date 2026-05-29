@@ -552,20 +552,6 @@ void PrintAbsyn::visitArr(Arr *p)
   _i_ = oldi;
 }
 
-void PrintAbsyn::visitFun(Fun *p)
-{
-  int oldi = _i_;
-  if (oldi > 0) render(_L_PAREN);
-
-  _i_ = 0; p->type_->accept(this);
-  render('(');
-  _i_ = 0; visitListType(p->listtype_);
-  render(')');
-
-  if (oldi > 0) render(_R_PAREN);
-  _i_ = oldi;
-}
-
 void PrintAbsyn::visitBaseType(BaseType *p) {} //abstract class
 
 void PrintAbsyn::visitIntBase(IntBase *p)
@@ -825,19 +811,6 @@ void PrintAbsyn::visitEOr(EOr *p)
   _i_ = 1; p->expr_1->accept(this);
   render("||");
   _i_ = 0; p->expr_2->accept(this);
-
-  if (oldi > 0) render(_R_PAREN);
-  _i_ = oldi;
-}
-
-void PrintAbsyn::visitEAnnotExp(EAnnotExp *p)
-{
-  int oldi = _i_;
-  if (oldi > 0) render(_L_PAREN);
-
-  _i_ = 0; p->type_->accept(this);
-  render('@');
-  _i_ = 0; p->expr_->accept(this);
 
   if (oldi > 0) render(_R_PAREN);
   _i_ = oldi;
@@ -1398,21 +1371,6 @@ void ShowAbsyn::visitArr(Arr *p)
   bufAppend(' ');
   bufAppend(')');
 }
-void ShowAbsyn::visitFun(Fun *p)
-{
-  bufAppend('(');
-  bufAppend("Fun");
-  bufAppend(' ');
-  bufAppend('[');
-  if (p->type_)  p->type_->accept(this);
-  bufAppend(']');
-  bufAppend(' ');
-  bufAppend('[');
-  if (p->listtype_)  p->listtype_->accept(this);
-  bufAppend(']');
-  bufAppend(' ');
-  bufAppend(')');
-}
 void ShowAbsyn::visitBaseType(BaseType *p) {} //abstract class
 
 void ShowAbsyn::visitIntBase(IntBase *p)
@@ -1608,20 +1566,6 @@ void ShowAbsyn::visitEOr(EOr *p)
   p->expr_1->accept(this);
   bufAppend(' ');
   p->expr_2->accept(this);
-  bufAppend(')');
-}
-void ShowAbsyn::visitEAnnotExp(EAnnotExp *p)
-{
-  bufAppend('(');
-  bufAppend("EAnnotExp");
-  bufAppend(' ');
-  bufAppend('[');
-  if (p->type_)  p->type_->accept(this);
-  bufAppend(']');
-  bufAppend(' ');
-  bufAppend('[');
-  if (p->expr_)  p->expr_->accept(this);
-  bufAppend(']');
   bufAppend(')');
 }
 void ShowAbsyn::visitArrSize(ArrSize *p) {} //abstract class

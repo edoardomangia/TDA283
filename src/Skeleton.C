@@ -242,15 +242,6 @@ void Skeleton::visitArr(Arr *arr)
 
 }
 
-void Skeleton::visitFun(Fun *fun)
-{
-  /* Code For Fun Goes Here */
-
-  if (fun->type_) fun->type_->accept(this);
-  if (fun->listtype_) fun->listtype_->accept(this);
-
-}
-
 void Skeleton::visitIntBase(IntBase *int_base)
 {
   /* Code For IntBase Goes Here */
@@ -415,15 +406,6 @@ void Skeleton::visitEOr(EOr *e_or)
 
   if (e_or->expr_1) e_or->expr_1->accept(this);
   if (e_or->expr_2) e_or->expr_2->accept(this);
-
-}
-
-void Skeleton::visitEAnnotExp(EAnnotExp *e_annot_exp)
-{
-  /* Code For EAnnotExp Goes Here */
-
-  if (e_annot_exp->type_) e_annot_exp->type_->accept(this);
-  if (e_annot_exp->expr_) e_annot_exp->expr_->accept(this);
 
 }
 

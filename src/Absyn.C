@@ -1180,54 +1180,6 @@ Arr *Arr::clone() const
 
 
 
-/********************   Fun    ********************/
-Fun::Fun(Type *p1, ListType *p2)
-{
-  type_ = p1;
-  listtype_ = p2;
-
-}
-
-Fun::Fun(const Fun & other)
-{
-  type_ = other.type_->clone();
-  listtype_ = other.listtype_->clone();
-
-}
-
-Fun &Fun::operator=(const Fun & other)
-{
-  Fun tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void Fun::swap(Fun & other)
-{
-  std::swap(type_, other.type_);
-  std::swap(listtype_, other.listtype_);
-
-}
-
-Fun::~Fun()
-{
-  delete(type_);
-  delete(listtype_);
-
-}
-
-void Fun::accept(Visitor *v)
-{
-  v->visitFun(this);
-}
-
-Fun *Fun::clone() const
-{
-  return new Fun(*this);
-}
-
-
-
 /********************   IntBase    ********************/
 IntBase::IntBase()
 {
@@ -2126,54 +2078,6 @@ void EOr::accept(Visitor *v)
 EOr *EOr::clone() const
 {
   return new EOr(*this);
-}
-
-
-
-/********************   EAnnotExp    ********************/
-EAnnotExp::EAnnotExp(Type *p1, Expr *p2)
-{
-  type_ = p1;
-  expr_ = p2;
-
-}
-
-EAnnotExp::EAnnotExp(const EAnnotExp & other)
-{
-  type_ = other.type_->clone();
-  expr_ = other.expr_->clone();
-
-}
-
-EAnnotExp &EAnnotExp::operator=(const EAnnotExp & other)
-{
-  EAnnotExp tmp(other);
-  swap(tmp);
-  return *this;
-}
-
-void EAnnotExp::swap(EAnnotExp & other)
-{
-  std::swap(type_, other.type_);
-  std::swap(expr_, other.expr_);
-
-}
-
-EAnnotExp::~EAnnotExp()
-{
-  delete(type_);
-  delete(expr_);
-
-}
-
-void EAnnotExp::accept(Visitor *v)
-{
-  v->visitEAnnotExp(this);
-}
-
-EAnnotExp *EAnnotExp::clone() const
-{
-  return new EAnnotExp(*this);
 }
 
 

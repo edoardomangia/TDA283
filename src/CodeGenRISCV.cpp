@@ -1,7 +1,6 @@
 #include "CodeGenRISCV.H"
 
 #include <cassert>
-#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <map>
@@ -10,8 +9,13 @@
 #include <string>
 #include <vector>
 
+// This file emits textual RISC-V assembly from the type-checked BNFC AST.
+
 namespace {
 
+// Small code-generation type model. arrayDepth records how many array layers
+// wrap the scalar base type.
+// (e.g.double[][] is DOUBLE with depth 2)
 enum class CGBase { INT, DOUBLE, BOOL, VOID, STRING };
 
 struct CGType {
@@ -23,22 +27,17 @@ struct CGType {
   }
   bool operator!=(const CGType &other) const { return !(*this == other); }
   bool isDouble() const { return arrayDepth == 0 && base == CGBase::DOUBLE; }
-  bool isIntLike() const {
-    return arrayDepth == 0 && (base == CGBase::INT || base == CGBase::BOOL);
-  }
-  bool isPtrLike() const {
-    return arrayDepth > 0 || base == CGBase::STRING;
-  }
 };
 
-CGType elementType(const CGType &t) {
-  return {t.base, t.arrayDepth - 1};
-}
+// Return the element type of an array by removing one array layer.
+CGType elementType(const CGType &t) { return {t.base, t.arrayDepth - 1}; }
 
+// Keep stack slots and call frames aligned to the required boundary.
 int alignUp(int value, int align) {
   return ((value + align - 1) / align) * align;
 }
 
+// Suffix used in generated labels for type-specific runtime data.
 std::string scalarSuffix(CGBase base) {
   switch (base) {
   case CGBase::INT:
@@ -55,6 +54,7 @@ std::string scalarSuffix(CGBase base) {
   return "unknown";
 }
 
+// Escape a Javalette string literal for an assembler .asciz directive.
 std::string escapeAsmString(const std::string &s) {
   std::ostringstream out;
   for (unsigned char ch : s) {
@@ -84,11 +84,15 @@ std::string escapeAsmString(const std::string &s) {
   return out.str();
 }
 
+// Local variables live in the current function's stack frame.
+// offset is stored as a positive distance from s0 and emitted as -offset(s0).
 struct VarInfo {
   int offset = 0;
   CGType ty;
 };
 
+// A left-hand side can either be a stack slot, such as x, or an address already
+// computed in a register, such as arr[i].
 struct LRef {
   bool isStack = false;
   int offset = 0;
@@ -96,19 +100,22 @@ struct LRef {
   CGType ty;
 };
 
+// Per-function code-generation state
 struct FnCtx {
-  std::ostringstream body;
-  std::vector<std::map<std::string, VarInfo>> scopes;
+  std::ostringstream body;                            // emitted body text
+  std::vector<std::map<std::string, VarInfo>> scopes; // lexical scopes
   CGType retTy;
-  std::string name;
+  std::string name; // unique label generation
   std::string epilogueLabel;
   int label = 0;
-  int stackUsed = 16;
+  int stackUsed = 16; // frame usage
 
+  // Labels are function-local, branch targets readable and unique.
   std::string L(const std::string &prefix = ".L") {
     return prefix + name + "_" + std::to_string(label++);
   }
 
+  // Reserve bytes in the frame and return the resulting positive s0 offset.
   int allocRaw(int size, int align) {
     stackUsed = alignUp(stackUsed, align);
     stackUsed += size;
@@ -121,20 +128,29 @@ struct FnCtx {
 };
 
 struct CodeGen {
+  // Assembly is accumulated by section so literals/data can be printed before
+  // the generated function bodies.
   std::ostringstream rodata;
   std::ostringstream data;
   std::ostringstream text;
+
+  // Literal pools avoid emitting duplicate strings and double constants.
   std::map<std::string, std::string> strLabels;
   std::map<std::uint64_t, std::string> doubleLabels;
+
+  // Default array values point at shared empty array objects in .data.
   std::set<std::string> emptyArrays;
   int strCount = 0;
   int dblCount = 0;
 
+  // Function result types are collected before bodies so forward calls can be
+  // emitted with the right return-register handling.
   std::map<std::string, CGType> fnSigs;
-  std::map<std::string, std::vector<CGType>> fnParamTys;
 
+  // Current function context. It is non-null only while a function is emitted.
   FnCtx *F = nullptr;
 
+  // Translate BNFC type nodes into the compact codegen type representation.
   CGType astType(Type *ty) const {
     if (dynamic_cast<Int *>(ty)) {
       return {CGBase::INT, 0};
@@ -156,6 +172,8 @@ struct CodeGen {
     return {};
   }
 
+  // new T[...] stores the scalar base type separately from the dimensions.
+  // This helper converts that base-type AST node.
   CGType astBaseType(::BaseType *ty) const {
     if (dynamic_cast<IntBase *>(ty)) {
       return {CGBase::INT, 0};
@@ -170,25 +188,28 @@ struct CodeGen {
     return {};
   }
 
+  // Values wider than an int, plus pointers, occupy one 64-bit slot on RV64.
   int sizeOf(CGType ty) const {
-    if (ty.arrayDepth > 0 || ty.base == CGBase::STRING || ty.base == CGBase::DOUBLE) {
+    if (ty.arrayDepth > 0 || ty.base == CGBase::STRING ||
+        ty.base == CGBase::DOUBLE) {
       return 8;
     }
     return 4;
   }
 
+  // Stack slot alignment follows the size used for loads/stores.
   int alignOf(CGType ty) const {
-    if (ty.arrayDepth > 0 || ty.base == CGBase::STRING || ty.base == CGBase::DOUBLE) {
+    if (ty.arrayDepth > 0 || ty.base == CGBase::STRING ||
+        ty.base == CGBase::DOUBLE) {
       return 8;
     }
     return 4;
   }
-
-  bool isDouble(CGType ty) const { return ty.isDouble(); }
 
   void pushScope() { F->scopes.emplace_back(); }
   void popScope() { F->scopes.pop_back(); }
 
+  // Resolve a local variable from innermost block scope outward.
   VarInfo *lookup(const std::string &name) {
     for (auto it = F->scopes.rbegin(); it != F->scopes.rend(); ++it) {
       auto found = it->find(name);
@@ -203,9 +224,13 @@ struct CodeGen {
     F->scopes.back()[name] = vi;
   }
 
+  // Allocate stack storage for a typed value or a temporary integer-sized
+  // value.
   int allocSlot(CGType ty) { return F->allocRaw(sizeOf(ty), alignOf(ty)); }
   int allocIntTemp() { return F->allocRaw(8, 8); }
 
+  // Load/store helpers centralize the choice between integer, pointer, and
+  // floating-point RISC-V instructions.
   void emitLoadStack(CGType ty, const std::string &reg, int offset) {
     if (ty.isDouble()) {
       F->emit("  fld " + reg + ", -" + std::to_string(offset) + "(s0)");
@@ -226,7 +251,8 @@ struct CodeGen {
     }
   }
 
-  void emitLoadAddr(CGType ty, const std::string &reg, const std::string &addrReg) {
+  void emitLoadAddr(CGType ty, const std::string &reg,
+                    const std::string &addrReg) {
     if (ty.isDouble()) {
       F->emit("  fld " + reg + ", 0(" + addrReg + ")");
     } else if (sizeOf(ty) == 8) {
@@ -236,7 +262,8 @@ struct CodeGen {
     }
   }
 
-  void emitStoreAddr(CGType ty, const std::string &reg, const std::string &addrReg) {
+  void emitStoreAddr(CGType ty, const std::string &reg,
+                     const std::string &addrReg) {
     if (ty.isDouble()) {
       F->emit("  fsd " + reg + ", 0(" + addrReg + ")");
     } else if (sizeOf(ty) == 8) {
@@ -264,18 +291,22 @@ struct CodeGen {
     }
   }
 
+  // Intern a string literal into .rodata and return its assembly label.
   std::string ensureString(const std::string &lit) {
     auto it = strLabels.find(lit);
     if (it != strLabels.end()) {
       return it->second;
     }
     std::string label = ".LCSTR" + std::to_string(strCount++);
-    rodata << "  .balign 8\n" << label << ":\n"
+    rodata << "  .balign 8\n"
+           << label << ":\n"
            << "  .asciz \"" << escapeAsmString(lit) << "\"\n";
     strLabels[lit] = label;
     return label;
   }
 
+  // Store double literals as their exact 64-bit bit pattern so loading them
+  // does not depend on assembler floating literal syntax.
   std::string ensureDouble(double value) {
     std::uint64_t bits = 0;
     static_assert(sizeof(bits) == sizeof(value), "double size mismatch");
@@ -287,15 +318,18 @@ struct CodeGen {
     std::string label = ".LCDBL" + std::to_string(dblCount++);
     std::ostringstream hex;
     hex << std::hex << bits;
-    rodata << "  .balign 8\n" << label << ":\n"
+    rodata << "  .balign 8\n"
+           << label << ":\n"
            << "  .dword 0x" << hex.str() << "\n";
     doubleLabels[bits] = label;
     return label;
   }
 
+  // Emit a shared zero-length array object for default-initialized arrays.
   std::string emptyArrayLabel(CGType ty) {
     assert(ty.arrayDepth > 0);
-    std::string label = "empty_arr_" + scalarSuffix(ty.base) + "_" + std::to_string(ty.arrayDepth);
+    std::string label = "empty_arr_" + scalarSuffix(ty.base) + "_" +
+                        std::to_string(ty.arrayDepth);
     if (!emptyArrays.count(label)) {
       emptyArrays.insert(label);
       data << "  .balign 8\n" << label << ":\n  .quad 0\n";
@@ -303,6 +337,8 @@ struct CodeGen {
     return label;
   }
 
+  // First pass over a function definition. Only signatures are collected here;
+  // function bodies are emitted in the second pass.
   void collectSig(FnDef *f) {
     fnSigs[f->ident_] = astType(f->type_);
     std::vector<CGType> pts;
@@ -312,9 +348,12 @@ struct CodeGen {
         pts.push_back(astType(arg->type_));
       }
     }
-    fnParamTys[f->ident_] = pts;
   }
 
+  // Expression results convention: integer, bool, pointer, and string results
+  // are left in t0; double results are left in ft0. These helpers spill/reload
+  // that current result when another expression needs the same scratch
+  // register.
   void saveCurrentResult(CGType ty, int offset) {
     emitStoreStack(ty, ty.isDouble() ? "ft0" : "t0", offset);
   }
@@ -323,6 +362,7 @@ struct CodeGen {
     emitLoadStack(ty, reg, offset);
   }
 
+  // Wrappers for common instruction choices.
   void emitIntConst(const std::string &reg, int value) {
     F->emit("  li " + reg + ", " + std::to_string(value));
   }
@@ -335,6 +375,8 @@ struct CodeGen {
     }
   }
 
+  // Default initialization matches the language runtime model: numeric and bool
+  // values become zero/false, and arrays point to a shared empty array object.
   void emitDefaultInit(CGType ty, int offset) {
     if (ty.arrayDepth > 0) {
       F->emit("  la t0, " + emptyArrayLabel(ty));
@@ -350,7 +392,10 @@ struct CodeGen {
     emitStoreStack(ty, "t0", offset);
   }
 
+  // Generate an expression and leave its result in the conventional result
+  // register: t0 for integer-like values and pointers, ft0 for doubles.
   CGType genExpr(Expr *e) {
+    // Literal constants are loaded directly into the result register.
     if (dynamic_cast<ELitTrue *>(e)) {
       emitIntConst("t0", 1);
       return {CGBase::BOOL, 0};
@@ -374,10 +419,13 @@ struct CodeGen {
       emitLoadStack(vi->ty, vi->ty.isDouble() ? "ft0" : "t0", vi->offset);
       return vi->ty;
     }
+    // String literals evaluate to the address of their .rodata label.
     if (auto *str = dynamic_cast<EString *>(e)) {
       F->emit("  la t0, " + ensureString(str->string_));
       return {CGBase::STRING, 0};
     }
+    // Array creation evaluates dimensions first and spills them because the
+    // recursive allocator will reuse t0/t1/a0/a1.
     if (auto *nw = dynamic_cast<ENew *>(e)) {
       std::vector<int> dims;
       dims.reserve(nw->listarrsize_->size());
@@ -391,11 +439,13 @@ struct CodeGen {
       }
       return genNewArray(astBaseType(nw->basetype_).base, dims, 0);
     }
+    // Reading arr[i] computes the element address and then loads from it.
     if (auto *idx = dynamic_cast<EIndex *>(e)) {
       LRef ref = genIndexRef(idx->expr_1, idx->expr_2);
       emitLoadAddr(ref.ty, ref.ty.isDouble() ? "ft0" : "t0", ref.addrReg);
       return ref.ty;
     }
+    // Array length is stored in the first word of every array object.
     if (auto *len = dynamic_cast<ELength *>(e)) {
       assert(len->ident_ == "length");
       CGType ty = genExpr(len->expr_);
@@ -403,6 +453,7 @@ struct CodeGen {
       F->emit("  lw t0, 0(t0)");
       return {CGBase::INT, 0};
     }
+    // Numeric negation has separate integer and floating-point instructions.
     if (auto *neg = dynamic_cast<Neg *>(e)) {
       CGType ty = genExpr(neg->expr_);
       if (ty.isDouble()) {
@@ -412,12 +463,15 @@ struct CodeGen {
       }
       return ty;
     }
+    // Booleans are represented as 0/1 integers, so !x is x == 0.
     if (auto *nt = dynamic_cast<Not *>(e)) {
       CGType ty = genExpr(nt->expr_);
       assert((ty == CGType{CGBase::BOOL, 0}));
       F->emit("  seqz t0, t0");
       return ty;
     }
+    // Binary arithmetic spills the left operand while generating the right one,
+    // then combines them with the appropriate integer or floating opcode.
     if (auto *add = dynamic_cast<EAdd *>(e)) {
       CGType lty = genExpr(add->expr_1);
       int left = allocSlot(lty);
@@ -426,10 +480,14 @@ struct CodeGen {
       assert(lty == rty);
       if (lty.isDouble()) {
         loadResultFromSlot(lty, "ft1", left);
-        F->emit(std::string("  ") + (dynamic_cast<Plus *>(add->addop_) ? "fadd.d" : "fsub.d") + " ft0, ft1, ft0");
+        F->emit(std::string("  ") +
+                (dynamic_cast<Plus *>(add->addop_) ? "fadd.d" : "fsub.d") +
+                " ft0, ft1, ft0");
       } else {
         loadResultFromSlot(lty, "t1", left);
-        F->emit(std::string("  ") + (dynamic_cast<Plus *>(add->addop_) ? "addw" : "subw") + " t0, t1, t0");
+        F->emit(std::string("  ") +
+                (dynamic_cast<Plus *>(add->addop_) ? "addw" : "subw") +
+                " t0, t1, t0");
       }
       return lty;
     }
@@ -458,6 +516,8 @@ struct CodeGen {
       }
       return lty;
     }
+    // Relational operators compare the saved left operand with the current
+    // right operand and produce a 0/1 boolean in t0.
     if (auto *rel = dynamic_cast<ERel *>(e)) {
       CGType lty = genExpr(rel->expr_1);
       int left = allocSlot(lty);
@@ -502,6 +562,7 @@ struct CodeGen {
       }
       return {CGBase::BOOL, 0};
     }
+    // Short-circuit &&: branch to the false label as soon as either side is 0.
     if (auto *land = dynamic_cast<EAnd *>(e)) {
       std::string lfalse = F->L();
       std::string lend = F->L();
@@ -516,6 +577,8 @@ struct CodeGen {
       F->emit(lend + ":");
       return {CGBase::BOOL, 0};
     }
+    // Short-circuit ||: branch to the true label as soon as either side is
+    // nonzero.
     if (auto *lor = dynamic_cast<EOr *>(e)) {
       std::string ltrue = F->L();
       std::string lend = F->L();
@@ -530,6 +593,10 @@ struct CodeGen {
       F->emit(lend + ":");
       return {CGBase::BOOL, 0};
     }
+    // Function calls follow the RV64 calling convention used by the runtime:
+    // integer/pointer args in a0-a7,
+    // double args in fa0-fa7,
+    // overflow on stack.
     if (auto *app = dynamic_cast<EApp *>(e)) {
       std::vector<int> argSlots;
       std::vector<CGType> argTypes;
@@ -549,6 +616,8 @@ struct CodeGen {
       std::vector<int> stackOffsets(argSlots.size(), -1);
       for (std::size_t i = 0; i < argSlots.size(); ++i) {
         const CGType &ty = argTypes[i];
+        // First count how much outgoing stack space is needed after the eight
+        // integer/pointer and eight floating argument registers are exhausted.
         if (ty.isDouble()) {
           if (fArg < 8) {
             ++fArg;
@@ -571,6 +640,8 @@ struct CodeGen {
         F->emit("  addi sp, sp, -" + std::to_string(callFrame));
       }
 
+      // Reload the evaluated argument values and move each one to its ABI
+      // register or outgoing stack slot before issuing the call.
       iArg = 0;
       fArg = 0;
       for (std::size_t i = 0; i < argSlots.size(); ++i) {
@@ -596,8 +667,11 @@ struct CodeGen {
       if (callFrame > 0) {
         F->emit("  addi sp, sp, " + std::to_string(callFrame));
       }
+      // Built-ins have fixed signatures; user-defined functions use the
+      // signature table collected before body emission.
       CGType retTy;
-      if (app->ident_ == "printInt" || app->ident_ == "printDouble" || app->ident_ == "printString") {
+      if (app->ident_ == "printInt" || app->ident_ == "printDouble" ||
+          app->ident_ == "printString") {
         retTy = {CGBase::VOID, 0};
       } else if (app->ident_ == "readInt") {
         retTy = {CGBase::INT, 0};
@@ -617,14 +691,12 @@ struct CodeGen {
       }
       return retTy;
     }
-    if (auto *ann = dynamic_cast<EAnnotExp *>(e)) {
-      return genExpr(ann->expr_);
-    }
-
     assert(false && "unhandled Expr variant");
     return {};
   }
 
+  // Compute the address of array[index]. Array objects begin with an 8-byte
+  // header area; the length is at offset 0 and element data starts at offset 8.
   LRef genIndexRef(Expr *arrayExpr, Expr *indexExpr) {
     CGType arrTy = genExpr(arrayExpr);
     assert(arrTy.arrayDepth > 0);
@@ -647,6 +719,7 @@ struct CodeGen {
     return {false, 0, "t2", elementType(arrTy)};
   }
 
+  // Convert a left-hand side to a typed destination for stores.
   LRef genLhs(Lhs *lhs) {
     if (auto *lv = dynamic_cast<LhsVar *>(lhs)) {
       VarInfo *vi = lookup(lv->ident_);
@@ -660,14 +733,7 @@ struct CodeGen {
     return {};
   }
 
-  void loadLhsValue(const LRef &ref) {
-    if (ref.isStack) {
-      emitLoadStack(ref.ty, ref.ty.isDouble() ? "ft0" : "t0", ref.offset);
-    } else {
-      emitLoadAddr(ref.ty, ref.ty.isDouble() ? "ft0" : "t0", ref.addrReg);
-    }
-  }
-
+  // Store the current expression result into a stack slot or computed address.
   void storeLhsValue(const LRef &ref) {
     if (ref.isStack) {
       emitStoreStack(ref.ty, ref.ty.isDouble() ? "ft0" : "t0", ref.offset);
@@ -676,7 +742,11 @@ struct CodeGen {
     }
   }
 
-  CGType genNewArray(CGBase base, const std::vector<int> &dims, std::size_t idx) {
+  // Allocate a new array with calloc.
+  // Multidimensional arrays are represented as arrays of pointers to freshly
+  // allocated child arrays.
+  CGType genNewArray(CGBase base, const std::vector<int> &dims,
+                     std::size_t idx) {
     CGType arrTy{base, static_cast<int>(dims.size() - idx)};
     CGType elemTy = elementType(arrTy);
 
@@ -684,6 +754,7 @@ struct CodeGen {
     int lenOff = allocIntTemp();
     emitStoreStack({CGBase::INT, 0}, "t0", lenOff);
     int elemSize = sizeOf(elemTy);
+    // Bytes to allocate: 8-byte header plus length * element size.
     if (elemSize == 4) {
       F->emit("  slli t1, t0, 2");
     } else if (elemSize == 8) {
@@ -702,6 +773,7 @@ struct CodeGen {
     emitLoadStack({CGBase::INT, 0}, "t1", lenOff);
     F->emit("  sw t1, 0(t0)");
 
+    // Recursively initialize child arrays for each element of an outer array.
     if (arrTy.arrayDepth > 1) {
       int idxOff = allocIntTemp();
       emitIntConst("t0", 0);
@@ -735,7 +807,12 @@ struct CodeGen {
     return arrTy;
   }
 
+  // Generate one statement.
+  // Statement code uses the same result-register convention as expressions and
+  // emits labels/branches for control flow.
   void genStmt(Stmt *s) {
+    // Empty statements and expression statements either do nothing or evaluate
+    // only for side effects.
     if (dynamic_cast<Empty *>(s)) {
       return;
     }
@@ -743,6 +820,8 @@ struct CodeGen {
       (void)genExpr(sexp->expr_);
       return;
     }
+    // Returns move the result into ABI return registers and jump to the shared
+    // function epilogue so frame teardown happens in one place.
     if (auto *ret = dynamic_cast<Ret *>(s)) {
       CGType ty = genExpr(ret->expr_);
       if (ty.isDouble()) {
@@ -753,10 +832,13 @@ struct CodeGen {
       F->emit("  j " + F->epilogueLabel);
       return;
     }
+    // Void returns need only branch to the epilogue.
     if (dynamic_cast<VRet *>(s)) {
       F->emit("  j " + F->epilogueLabel);
       return;
     }
+    // Declarations allocate stack slots in the current frame and bind names in
+    // the current lexical scope.
     if (auto *decl = dynamic_cast<Decl *>(s)) {
       CGType ty = astType(decl->type_);
       for (Item *it : *decl->listitem_) {
@@ -773,13 +855,25 @@ struct CodeGen {
       }
       return;
     }
+    // Assignment stores the current RHS result through the destination LRef.
     if (auto *ass = dynamic_cast<Ass *>(s)) {
       LRef ref = genLhs(ass->lhs_);
+      int addrOff = -1;
+      if (!ref.isStack) {
+        addrOff = allocIntTemp();
+        F->emit("  sd " + ref.addrReg + ", -" + std::to_string(addrOff) +
+                "(s0)");
+      }
       CGType rhs = genExpr(ass->expr_);
       assert(rhs == ref.ty);
+      if (!ref.isStack) {
+        F->emit("  ld " + ref.addrReg + ", -" + std::to_string(addrOff) +
+                "(s0)");
+      }
       storeLhsValue(ref);
       return;
     }
+    // ++ and -- operate on integer l-values, either stack slots or array cells.
     if (auto *inc = dynamic_cast<Incr *>(s)) {
       LRef ref = genLhs(inc->lhs_);
       if (ref.isStack) {
@@ -806,6 +900,7 @@ struct CodeGen {
       }
       return;
     }
+    // if without else skips the scoped body when the condition is false.
     if (auto *cond = dynamic_cast<Cond *>(s)) {
       std::string lend = F->L();
       CGType ty = genExpr(cond->expr_);
@@ -817,6 +912,7 @@ struct CodeGen {
       F->emit(lend + ":");
       return;
     }
+    // if/else emits an else label and a join label after both scoped branches.
     if (auto *cond = dynamic_cast<CondElse *>(s)) {
       std::string lelse = F->L();
       std::string lend = F->L();
@@ -834,6 +930,7 @@ struct CodeGen {
       F->emit(lend + ":");
       return;
     }
+    // while loops branch back to the condition label until it evaluates false.
     if (auto *wh = dynamic_cast<While *>(s)) {
       std::string lcond = F->L();
       std::string lend = F->L();
@@ -848,6 +945,8 @@ struct CodeGen {
       F->emit(lend + ":");
       return;
     }
+    // foreach lowers to an index loop over the array length and binds the loop
+    // variable to a fresh stack slot in the body scope.
     if (auto *fe = dynamic_cast<ForEach *>(s)) {
       CGType itemTy = astType(fe->type_);
       CGType arrTy{itemTy.base, itemTy.arrayDepth + 1};
@@ -890,6 +989,7 @@ struct CodeGen {
       F->emit(lend + ":");
       return;
     }
+    // Blocks introduce a lexical scope for declarations.
     if (auto *bs = dynamic_cast<BStmt *>(s)) {
       auto *block = dynamic_cast<Block *>(bs->blk_);
       pushScope();
@@ -903,6 +1003,9 @@ struct CodeGen {
     assert(false && "unhandled statement");
   }
 
+  // Emit one function. Parameters are copied from ABI registers/stack slots
+  // into local stack slots so the rest of the backend can treat them like
+  // variables.
   void emitFunction(FnDef *f) {
     FnCtx ctx;
     F = &ctx;
@@ -910,6 +1013,8 @@ struct CodeGen {
     ctx.retTy = astType(f->type_);
     ctx.epilogueLabel = ".Lreturn_" + f->ident_;
 
+    // Reserve local slots for parameters before body generation so all variable
+    // references use the same stack-frame addressing scheme.
     pushScope();
     int iArg = 0;
     int fArg = 0;
@@ -948,13 +1053,18 @@ struct CodeGen {
       ctx.emit("  j " + ctx.epilogueLabel);
     }
 
+    // The frame size is known after body generation because stack slots are
+    // allocated on demand while walking declarations and temporary expressions.
     int frame = ctx.frameSize();
+    // Standard prologue saves return address and old frame pointer, then s0 is
+    // used as a stable base for local stack slots.
     text << "  .globl " << f->ident_ << "\n" << f->ident_ << ":\n";
     text << "  addi sp, sp, -" << frame << "\n";
     text << "  sd ra, " << (frame - 8) << "(sp)\n";
     text << "  sd s0, " << (frame - 16) << "(sp)\n";
     text << "  addi s0, sp, " << frame << "\n";
     text << ctx.body.str();
+    // All returns jump here so the epilogue is emitted only once.
     text << ctx.epilogueLabel << ":\n";
     text << "  ld ra, -8(s0)\n";
     text << "  ld s0, -16(s0)\n";
@@ -965,6 +1075,8 @@ struct CodeGen {
     F = nullptr;
   }
 
+  // Full program generation is two-pass: collect signatures first for forward
+  // calls, then emit all functions and finally print the required sections.
   void gen(Program *p, std::ostream &out) {
     for (TopDef *td : *p->listtopdef_) {
       if (auto *fn = dynamic_cast<FnDef *>(td)) {
@@ -977,6 +1089,7 @@ struct CodeGen {
       }
     }
 
+    // Only emit .rodata/.data when something was placed there.
     if (!rodata.str().empty()) {
       out << "  .section .rodata\n" << rodata.str() << '\n';
     }
@@ -989,6 +1102,7 @@ struct CodeGen {
 
 } // namespace
 
+// Wrapper RISC-V compiler entry point.
 void generateRISCV(Program *prog, std::ostream &out) {
   CodeGen cg;
   cg.gen(prog, out);

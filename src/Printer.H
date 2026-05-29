@@ -77,7 +77,6 @@ class PrintAbsyn : public Visitor
   void visitBool(Bool *p);
   void visitVoid(Void *p);
   void visitArr(Arr *p);
-  void visitFun(Fun *p);
   void visitBaseType(BaseType *p); /* abstract class */
   void visitIntBase(IntBase *p);
   void visitDoubBase(DoubBase *p);
@@ -102,7 +101,6 @@ class PrintAbsyn : public Visitor
   void visitERel(ERel *p);
   void visitEAnd(EAnd *p);
   void visitEOr(EOr *p);
-  void visitEAnnotExp(EAnnotExp *p);
   void visitArrSize(ArrSize *p); /* abstract class */
   void visitNewDim(NewDim *p);
   void visitListArrSize(ListArrSize *p);
@@ -259,7 +257,6 @@ class ShowAbsyn : public Visitor
   void visitBool(Bool *p);
   void visitVoid(Void *p);
   void visitArr(Arr *p);
-  void visitFun(Fun *p);
   void visitBaseType(BaseType *p); /* abstract class */
   void visitIntBase(IntBase *p);
   void visitDoubBase(DoubBase *p);
@@ -284,7 +281,6 @@ class ShowAbsyn : public Visitor
   void visitERel(ERel *p);
   void visitEAnd(EAnd *p);
   void visitEOr(EOr *p);
-  void visitEAnnotExp(EAnnotExp *p);
   void visitArrSize(ArrSize *p); /* abstract class */
   void visitNewDim(NewDim *p);
   void visitListArrSize(ListArrSize *p);

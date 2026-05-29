@@ -95,7 +95,6 @@ IDENT [a-zA-Z0-9'_]
 <INITIAL>">="      	 return _GTEQ;
 <INITIAL>"=="      	 return _DEQ;
 <INITIAL>"!="      	 return _BANGEQ;
-<INITIAL>"@"      	 return _AT;
 <INITIAL>"boolean"      	 return _KW_boolean;
 <INITIAL>"double"      	 return _KW_double;
 <INITIAL>"else"      	 return _KW_else;

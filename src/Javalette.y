@@ -110,7 +110,6 @@ extern int yylex(YYSTYPE *lvalp, YYLTYPE *llocp, yyscan_t scanner);
 %token          _DEQ         /* == */
 %token          _GT          /* > */
 %token          _GTEQ        /* >= */
-%token          _AT          /* @ */
 %token          _LBRACK      /* [ */
 %token          _RBRACK      /* ] */
 %token          _KW_boolean  /* boolean */
@@ -255,7 +254,6 @@ Expr1 : Expr2 _DAMP Expr1 { $$ = new EAnd($1, $3); }
 ;
 Expr : Expr1 _DBAR Expr { $$ = new EOr($1, $3); }
   | Expr1 { $$ = $1; }
-  | Type _AT Expr { $$ = new EAnnotExp($1, $3); }
 ;
 ListExpr : /* empty */ { $$ = new ListExpr(); }
   | Expr { $$ = new ListExpr(); $$->push_back($1); }

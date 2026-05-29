@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <cstdlib>
 #include <exception>
 #include <iostream>
 
@@ -7,7 +6,6 @@
 #include "CodeGenRISCV.H"
 #include "Parser.H"
 #include "ParserError.H"
-#include "Printer.H"
 #include "TypeChecker.H"
 
 int main(int argc, char **argv) {

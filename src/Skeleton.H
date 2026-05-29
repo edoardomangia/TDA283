@@ -53,7 +53,6 @@ public:
   void visitIntBase(IntBase *p);
   void visitDoubBase(DoubBase *p);
   void visitBoolBase(BoolBase *p);
-  void visitFun(Fun *p);
   void visitEVar(EVar *p);
   void visitELitInt(ELitInt *p);
   void visitELitDoub(ELitDoub *p);
@@ -83,7 +82,6 @@ public:
   void visitGE(GE *p);
   void visitEQU(EQU *p);
   void visitNE(NE *p);
-  void visitEAnnotExp(EAnnotExp *p);
   void visitListTopDef(ListTopDef *p);
   void visitListArg(ListArg *p);
   void visitListStmt(ListStmt *p);

@@ -72,8 +72,6 @@ DoubBase.  BaseType ::= "double" ;
 
 BoolBase.  BaseType ::= "boolean" ;
 
-internal   Fun. Type ::= Type "(" [Type] ")" ;
-
 separator  Type "," ;
 
 -- Expressions ---------------------------------------------
@@ -153,5 +151,3 @@ comment    "//" ;
 comment    "/*" "*/" ;
 
 -- other stuff ---------------------------------------------
-
-EAnnotExp. Expr ::= Type "@" Expr ;
